@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Build and release outputs
+dist/
+dist-electron/
+release/
+out/
+build/
+
+# Test and tool caches
+coverage/
+.vite/
+.vitest/
+.eslintcache
+*.tsbuildinfo
+
+# Runtime logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# Editor and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Packaged or downloaded formatter binaries
+resources/formatters/**/*.exe
+resources/formatters/**/*.dll
+!resources/formatters/**/README.md

@@ -1,0 +1,68 @@
+{
+  "name": "gitpilot",
+  "version": "1.0.0",
+  "description": "A desktop visual Git client built with Electron, React and TypeScript.",
+  "main": "dist-electron/electron/main.js",
+  "author": "GitPilot",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -k \"npm:dev:electron\" \"npm:dev:renderer\" \"npm:dev:app\"",
+    "dev:electron": "tsc -p tsconfig.electron.json --watch --preserveWatchOutput",
+    "dev:renderer": "vite --host 127.0.0.1",
+    "dev:app": "wait-on dist-electron/electron/main.js http://127.0.0.1:5173 && node scripts/startElectron.cjs",
+    "build": "tsc -p tsconfig.json --noEmit && vite build && tsc -p tsconfig.electron.json",
+    "start": "node scripts/startElectron.cjs",
+    "dist": "npm run build && electron-builder",
+    "lint": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.electron.json --noEmit"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^5.3.7",
+    "antd": "^5.16.5",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "zustand": "^4.5.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "@types/react": "^18.2.74",
+    "@types/react-dom": "^18.2.24",
+    "@vitejs/plugin-react": "^4.2.1",
+    "concurrently": "^8.2.2",
+    "electron": "^29.3.0",
+    "electron-builder": "^24.13.3",
+    "typescript": "^5.4.5",
+    "vite": "^5.2.8",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.gitpilot.app",
+    "productName": "GitPilot",
+    "executableName": "GitPilot",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "build/icon.ico",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "artifactName": "GitPilot Setup ${version}.${ext}",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}
