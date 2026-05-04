@@ -6,7 +6,6 @@ dist/
 dist-electron/
 release/
 out/
-build/
 
 # Test and tool caches
 coverage/
