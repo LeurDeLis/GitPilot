@@ -111,7 +111,7 @@
 ```text
 GitPilot/
 ├── package.json                  # 项目配置及依赖
-├── app.py                        # Python 启动入口（调用 npm run dev）
+├── app.py                        # Python 启动入口（自动选择可用端口）
 ├── vite.config.ts                # Vite 构建配置
 ├── tsconfig.json                 # 渲染进程 TS 配置
 ├── tsconfig.electron.json        # 主进程 TS 配置
@@ -122,6 +122,9 @@ GitPilot/
 │   ├── main.ts                   # 主进程：窗口、IPC、持久化
 │   ├── preload.ts                # 预加载：contextBridge API
 │   └── gitService.ts             # Git 命令服务层
+├── scripts/
+│   ├── startElectron.cjs         # 启动已构建的 Electron 应用
+│   └── startDevApp.cjs            # 等待开发服务后启动 Electron
 └── src/
     ├── main.tsx                  # React 入口
     ├── App.tsx                   # 根组件及页面路由
@@ -175,10 +178,10 @@ npm install
 npm run dev
 ```
 
-也可以运行 `python app.py`，它会调用同一套 `npm run dev` 开发流程。
+也可以运行 `python app.py`，它会调用同一套 `npm run dev` 开发流程；如果 5173 端口已被占用，会自动选择下一个可用端口并同步给 Vite 和 Electron。
 
 该命令会并行启动：
-- **Vite Dev Server**：`http://127.0.0.1:5173`（React 热更新）
+- **Vite Dev Server**：`http://127.0.0.1:5173`（默认端口；占用时自动使用下一个可用端口，支持 React 热更新）
 - **TypeScript Watch**：主进程代码实时编译
 - **Electron 应用窗口**
 

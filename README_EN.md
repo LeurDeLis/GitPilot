@@ -111,7 +111,7 @@
 ```text
 GitPilot/
 ├── package.json                  # Project config & dependencies
-├── app.py                        # Python launcher (delegates to npm run dev)
+├── app.py                        # Python launcher (selects an available port)
 ├── vite.config.ts                # Vite build configuration
 ├── tsconfig.json                 # Renderer TS config
 ├── tsconfig.electron.json        # Main process TS config
@@ -122,6 +122,9 @@ GitPilot/
 │   ├── main.ts                   # Main process: window, IPC, persistence
 │   ├── preload.ts                # Preload: contextBridge API
 │   └── gitService.ts             # Git command service layer
+├── scripts/
+│   ├── startElectron.cjs         # Launches the pre-built Electron app
+│   └── startDevApp.cjs            # Waits for dev services before launching Electron
 └── src/
     ├── main.tsx                  # React entry point
     ├── App.tsx                   # Root component & page routing
@@ -175,10 +178,10 @@ npm install
 npm run dev
 ```
 
-You can also run `python app.py`; it delegates to the same `npm run dev` workflow.
+You can also run `python app.py`; it delegates to the same `npm run dev` workflow. If port 5173 is already in use, it automatically selects the next available port and passes it to Vite and Electron.
 
 This command starts concurrently:
-- **Vite Dev Server**: `http://127.0.0.1:5173` (React hot reload)
+- **Vite Dev Server**: `http://127.0.0.1:5173` (default; selects the next available port when occupied, with React hot reload)
 - **TypeScript Watch**: Main process code recompiles on change
 - **Electron Application Window**
 
