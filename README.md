@@ -199,6 +199,21 @@ npm run dist
 
 构建产物输出到 `release/` 目录。
 
+### Windows 安装包与绿色版
+
+```bash
+# Windows 安装包（NSIS）
+npm run dist:installer
+
+# Windows 绿色便携版
+npm run dist:portable
+
+# 一次生成安装包和绿色版
+npm run dist:win
+```
+
+以上命令都会使用 `src/icon/app_icon.png` 对应的应用图标，安装包和便携版输出到 `release/`。
+
 ### 其他命令
 
 | 命令 | 说明 |

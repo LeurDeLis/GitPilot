@@ -199,6 +199,21 @@ npm run dist
 
 Build artifacts are output to the `release/` directory.
 
+### Windows Installer and Portable Build
+
+```bash
+# Windows installer (NSIS)
+npm run dist:installer
+
+# Windows portable build
+npm run dist:portable
+
+# Generate both packages in one command
+npm run dist:win
+```
+
+All of these commands use the application icon from `src/icon/app_icon.png`; installer and portable artifacts are written to `release/`.
+
 ### Other Commands
 
 | Command | Description |
