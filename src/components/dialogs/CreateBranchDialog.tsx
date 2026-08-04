@@ -1,5 +1,6 @@
 import { Form, Input, Modal } from "antd";
 import { useEffect } from "react";
+import { useI18n } from "../../i18n";
 
 type CreateBranchDialogProps = {
   open: boolean;
@@ -15,6 +16,7 @@ export function CreateBranchDialog({
   onSubmit
 }: CreateBranchDialogProps) {
   const [form] = Form.useForm<{ branchName: string }>();
+  const { t } = useI18n();
 
   useEffect(() => {
     if (!open) {
@@ -29,25 +31,25 @@ export function CreateBranchDialog({
 
   return (
     <Modal
-      title="创建分支"
+      title={t("createBranch")}
       open={open}
       onCancel={onCancel}
       onOk={submit}
       confirmLoading={busy}
-      okText="创建"
-      cancelText="取消"
+      okText={t("createBranch")}
+      cancelText={t("cancel")}
       destroyOnClose
     >
       <Form form={form} layout="vertical">
         <Form.Item
           name="branchName"
-          label="分支名"
+          label={t("branchName")}
           rules={[
-            { required: true, message: "分支名不能为空" },
-            { whitespace: true, message: "分支名不能为空" },
+            { required: true, message: t("branchNameRequired") },
+            { whitespace: true, message: t("branchNameRequired") },
             {
               pattern: /^[^\s~^:?*[\\]+$/,
-              message: "分支名包含非法字符"
+              message: t("branchNameInvalid")
             }
           ]}
         >

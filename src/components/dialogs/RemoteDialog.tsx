@@ -1,5 +1,6 @@
 import { Form, Input, Modal } from "antd";
 import { useEffect } from "react";
+import { useI18n } from "../../i18n";
 import type { RemoteInfo } from "../../types/git";
 
 type RemoteDialogProps = {
@@ -20,6 +21,7 @@ export function RemoteDialog({
   onSubmit
 }: RemoteDialogProps) {
   const [form] = Form.useForm<{ name: string; url: string }>();
+  const { t } = useI18n();
 
   useEffect(() => {
     if (open) {
@@ -39,32 +41,32 @@ export function RemoteDialog({
 
   return (
     <Modal
-      title={mode === "add" ? "新增 remote" : "修改 remote URL"}
+      title={mode === "add" ? t("addRemote") : t("editRemote")}
       open={open}
       onCancel={onCancel}
       onOk={submit}
       confirmLoading={busy}
-      okText={mode === "add" ? "新增" : "保存"}
-      cancelText="取消"
+      okText={mode === "add" ? t("add") : t("save")}
+      cancelText={t("cancel")}
       destroyOnClose
     >
       <Form form={form} layout="vertical">
         <Form.Item
           name="name"
-          label="Remote 名称"
+          label={t("remoteName")}
           rules={[
-            { required: true, message: "Remote 名称不能为空" },
-            { pattern: /^[A-Za-z0-9._-]+$/, message: "Remote 名称只能包含字母、数字、点、下划线或短横线" }
+            { required: true, message: t("remoteNameRequired") },
+            { pattern: /^[A-Za-z0-9._-]+$/, message: t("remoteNameInvalid") }
           ]}
         >
           <Input disabled={mode === "edit"} placeholder="origin" />
         </Form.Item>
         <Form.Item
           name="url"
-          label="Remote URL"
+          label={t("remoteUrl")}
           rules={[
-            { required: true, message: "Remote URL 不能为空" },
-            { whitespace: true, message: "Remote URL 不能为空" }
+            { required: true, message: t("remoteUrlRequired") },
+            { whitespace: true, message: t("remoteUrlEmpty") }
           ]}
         >
           <Input placeholder="https://github.com/user/repo.git" />

@@ -10,7 +10,7 @@
     "dev": "concurrently -k \"npm:dev:electron\" \"npm:dev:renderer\" \"npm:dev:app\"",
     "dev:electron": "tsc -p tsconfig.electron.json --watch --preserveWatchOutput",
     "dev:renderer": "vite --host 127.0.0.1",
-    "dev:app": "wait-on dist-electron/electron/main.js http://127.0.0.1:5173 && node scripts/startElectron.cjs",
+    "dev:app": "node scripts/startDevApp.cjs",
     "build": "tsc -p tsconfig.json --noEmit && vite build && tsc -p tsconfig.electron.json",
     "start": "node scripts/startElectron.cjs",
     "dist": "npm run build && electron-builder",

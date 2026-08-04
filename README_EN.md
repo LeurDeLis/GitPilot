@@ -64,6 +64,12 @@
 - **Real-time Logging** — Records the last 300 Git operations, including commands, results, and error messages
 - **Clear Logs** — One-click log clearing
 
+### 🎨 Interface & Preferences
+- **Chinese / English UI** — Switch between Chinese and English; the selection is stored locally
+- **Two Themes** — Light is the default theme, with an optional dark theme; the selection is stored locally
+- **Custom Menu** — The GitPilot menu in the top-left provides open, clone, theme, language, and refresh actions instead of Electron's default menu
+- **Log Layout** — The operation log uses fixed columns, and long Git commands are truncated with an ellipsis instead of wrapping in a narrow panel
+
 ## 🏗️ Architecture
 
 ```
@@ -105,6 +111,7 @@
 ```text
 GitPilot/
 ├── package.json                  # Project config & dependencies
+├── app.py                        # Python launcher (delegates to npm run dev)
 ├── vite.config.ts                # Vite build configuration
 ├── tsconfig.json                 # Renderer TS config
 ├── tsconfig.electron.json        # Main process TS config
@@ -118,6 +125,10 @@ GitPilot/
 └── src/
     ├── main.tsx                  # React entry point
     ├── App.tsx                   # Root component & page routing
+    ├── i18n.tsx                  # Chinese/English translations and state
+    ├── theme.tsx                 # Light/dark theme state
+    ├── icon/
+    │   └── app_icon.png          # Top-left brand icon
     ├── types/
     │   ├── git.ts                # Shared type definitions
     │   └── global.d.ts           # Global type declarations
@@ -150,6 +161,7 @@ GitPilot/
 
 - **Node.js** 18+
 - **Git** installed and available in system PATH
+- **Python** 3 (only required when using `app.py`)
 
 ### Install Dependencies
 
@@ -162,6 +174,8 @@ npm install
 ```bash
 npm run dev
 ```
+
+You can also run `python app.py`; it delegates to the same `npm run dev` workflow.
 
 This command starts concurrently:
 - **Vite Dev Server**: `http://127.0.0.1:5173` (React hot reload)

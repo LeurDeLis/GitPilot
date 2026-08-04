@@ -1,5 +1,6 @@
 import { Form, Modal, Select } from "antd";
 import { useEffect } from "react";
+import { useI18n } from "../../i18n";
 
 type MergeDialogProps = {
   open: boolean;
@@ -19,6 +20,7 @@ export function MergeDialog({
   onSubmit
 }: MergeDialogProps) {
   const [form] = Form.useForm<{ branchName: string }>();
+  const { t } = useI18n();
   const options = branches
     .filter((branch) => branch && branch !== currentBranch)
     .map((branch) => ({ label: branch, value: branch }));
@@ -36,22 +38,22 @@ export function MergeDialog({
 
   return (
     <Modal
-      title="合并分支"
+      title={t("mergeBranch")}
       open={open}
       onCancel={onCancel}
       onOk={submit}
       confirmLoading={busy}
-      okText="执行合并"
-      cancelText="取消"
+      okText={t("mergeBranch")}
+      cancelText={t("cancel")}
       destroyOnClose
     >
       <Form form={form} layout="vertical">
         <Form.Item
           name="branchName"
-          label="选择要合并到当前分支的目标分支"
-          rules={[{ required: true, message: "请选择分支" }]}
+          label={t("mergeTargetLabel")}
+          rules={[{ required: true, message: t("selectBranchRequired") }]}
         >
-          <Select showSearch options={options} placeholder="选择分支" />
+          <Select showSearch options={options} placeholder={t("selectBranch")} />
         </Form.Item>
       </Form>
     </Modal>

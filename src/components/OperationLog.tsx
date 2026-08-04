@@ -1,59 +1,65 @@
 import { ClearOutlined } from "@ant-design/icons";
 import { Button, Space, Table, Tag, Tooltip, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import { useI18n } from "../i18n";
 import type { OperationLogItem } from "../types/git";
-import { formatDate } from "../utils/format";
+import { formatDate, operationText } from "../utils/format";
 
 type OperationLogProps = {
   logs: OperationLogItem[];
   onClear(): void;
 };
 
-const columns: ColumnsType<OperationLogItem> = [
-  {
-    title: "时间",
-    dataIndex: "time",
-    width: 150,
-    render: (value: string) => formatDate(value)
-  },
-  {
-    title: "操作",
-    dataIndex: "operation",
-    width: 128,
-    render: (value: string) => <Tag>{value}</Tag>
-  },
-  {
-    title: "状态",
-    dataIndex: "success",
-    width: 72,
-    render: (success: boolean) => success ? <Tag color="green">成功</Tag> : <Tag color="red">失败</Tag>
-  },
-  {
-    title: "命令",
-    dataIndex: "command",
-    render: (value: string) => (
-      <Typography.Text code copyable ellipsis>
-        {value}
-      </Typography.Text>
-    )
-  }
-];
-
 export function OperationLog({ logs, onClear }: OperationLogProps) {
+  const { language, t } = useI18n();
+
+  const columns: ColumnsType<OperationLogItem> = [
+    {
+      title: t("time"),
+      dataIndex: "time",
+      width: 154,
+      render: (value: string) => formatDate(value, language)
+    },
+    {
+      title: t("operation"),
+      dataIndex: "operation",
+      width: 132,
+      render: (value: string) => <Tag>{operationText(value, language)}</Tag>
+    },
+    {
+      title: t("status"),
+      dataIndex: "success",
+      width: 80,
+      render: (success: boolean) => success ? <Tag color="green">{t("success")}</Tag> : <Tag color="red">{t("failed")}</Tag>
+    },
+    {
+      title: t("command"),
+      dataIndex: "command",
+      ellipsis: true,
+      render: (value: string) => (
+        <Typography.Text className="log-command" code copyable ellipsis>
+          {value}
+        </Typography.Text>
+      )
+    }
+  ];
+
   return (
     <div className="log-panel">
       <div className="tab-toolbar">
-        <Typography.Text type="secondary">保留最近 300 条 Git 命令记录</Typography.Text>
-        <Tooltip title="清空日志">
+        <Typography.Text type="secondary">{t("keepRecentLogs")}</Typography.Text>
+        <Tooltip title={t("clearLog")}>
           <Button size="small" icon={<ClearOutlined />} onClick={onClear} />
         </Tooltip>
       </div>
       <Table<OperationLogItem>
+        className="operation-log-table"
         rowKey="id"
         size="small"
         columns={columns}
         dataSource={logs}
         pagination={false}
+        tableLayout="fixed"
         scroll={{ y: 500 }}
         expandable={{
           expandedRowRender: (record) => (

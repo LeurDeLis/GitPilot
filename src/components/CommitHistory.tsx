@@ -1,5 +1,6 @@
 import { HistoryOutlined } from "@ant-design/icons";
 import { Empty, List, Space, Typography } from "antd";
+import { useI18n } from "../i18n";
 import type { CommitItem } from "../types/git";
 import { formatDate } from "../utils/format";
 
@@ -9,6 +10,8 @@ type CommitHistoryProps = {
 };
 
 export function CommitHistory({ commits, onSelectCommit }: CommitHistoryProps) {
+  const { language, t } = useI18n();
+
   return (
     <div className="history-panel">
       {commits.length > 0 ? (
@@ -26,14 +29,14 @@ export function CommitHistory({ commits, onSelectCommit }: CommitHistoryProps) {
                   {commit.message}
                 </Typography.Text>
                 <Typography.Text type="secondary" className="history-meta">
-                  {commit.author} · {formatDate(commit.date)}
+                  {commit.author} / {formatDate(commit.date, language)}
                 </Typography.Text>
               </div>
             </List.Item>
           )}
         />
       ) : (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无提交历史" />
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("noCommitDetail")} />
       )}
     </div>
   );

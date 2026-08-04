@@ -10,6 +10,7 @@ import {
 } from "@ant-design/icons";
 import { Alert, Button, Empty, Space, Table, Tag, Tooltip, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import { useI18n } from "../i18n";
 import type { ChangedFile, GitStatus } from "../types/git";
 import { statusColor, statusText } from "../utils/format";
 
@@ -34,6 +35,7 @@ export function ChangedFiles({
   onUnstage,
   onDiscard
 }: ChangedFilesProps) {
+  const { language, t } = useI18n();
   const files = status?.files ?? [];
   const hasConflicts = Boolean(status?.hasConflicts);
 
@@ -45,68 +47,68 @@ export function ChangedFiles({
 
   const columns: ColumnsType<ChangedFile> = [
     {
-      title: "状态",
+      title: t("status"),
       dataIndex: "status",
       width: 92,
       render: (s: ChangedFile["status"]) => (
-        <Tag color={statusColor(s)}>{statusText(s)}</Tag>
+        <Tag color={statusColor(s)}>{statusText(s, language)}</Tag>
       )
     },
     {
-      title: "文件",
+      title: t("changedFiles"),
       dataIndex: "path",
       render: (_value, record) => (
         <div className="file-cell">
           <span className="file-name" title={record.path}>{record.path}</span>
           {record.originalPath && (
             <span className="file-original" title={record.originalPath}>
-              原路径：{record.originalPath}
+              {t("originalPath", { path: record.originalPath })}
             </span>
           )}
         </div>
       )
     },
     {
-      title: "暂存",
+      title: t("staged"),
       dataIndex: "staged",
       width: 80,
       align: "center",
-      render: (staged: boolean) => staged ? <Tag color="green">是</Tag> : <Tag>否</Tag>
+      render: (staged: boolean) => staged ? <Tag color="green">{t("yes")}</Tag> : <Tag>{t("no")}</Tag>
     },
     {
-      title: "操作",
+      title: t("actions"),
       width: 104,
       align: "center",
       render: (_value, record) => (
         <Space size={2}>
           {record.staged ? (
-          <Tooltip title="取消暂存">
-            <Button
-              type="text"
-              size="small"
-              icon={<VerticalAlignBottomOutlined />}
-              disabled={busy}
-              onClick={(e) => {
-                e.stopPropagation();
-                onUnstage([record.path]);
-              }}
-            />
-          </Tooltip>
-        ) : (
-          <Tooltip title="暂存文件">
-            <Button
-              type="text"
-              size="small"
-              icon={<VerticalAlignTopOutlined />}
-              disabled={busy}
-              onClick={(e) => {
-                e.stopPropagation();
-                onStage([record.path]);
-              }}
-            />
-          </Tooltip>
-        )}
-          <Tooltip title="回滚文件变更">
+            <Tooltip title={t("unstageFile")}>
+              <Button
+                type="text"
+                size="small"
+                icon={<VerticalAlignBottomOutlined />}
+                disabled={busy}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUnstage([record.path]);
+                }}
+              />
+            </Tooltip>
+          ) : (
+            <Tooltip title={t("stageFile")}>
+              <Button
+                type="text"
+                size="small"
+                icon={<VerticalAlignTopOutlined />}
+                disabled={busy}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStage([record.path]);
+                }}
+              />
+            </Tooltip>
+          )}
+          <Tooltip title={t("discardFile")}>
             <Button
               type="text"
               size="small"
@@ -128,27 +130,27 @@ export function ChangedFiles({
     <section className="panel changed-files">
       <div className="panel-header">
         <div>
-          <Typography.Title level={4}>文件变更</Typography.Title>
+          <Typography.Title level={4}>{t("changedFiles")}</Typography.Title>
           <Typography.Text type="secondary">
-            {status ? `${files.length} 个变更文件` : "等待加载仓库状态"}
+            {status ? t("changedFilesCount", { count: files.length }) : t("waitingForRepositoryStatus")}
           </Typography.Text>
         </div>
         <Space size={8}>
-          <Tooltip title="暂存选中文件">
+          <Tooltip title={t("stageSelectedFiles")}>
             <Button
               icon={<UploadOutlined />}
               disabled={selectedUnstagedFiles.length === 0 || busy}
               onClick={() => onStage(selectedUnstagedFiles)}
             />
           </Tooltip>
-          <Tooltip title="取消暂存选中文件">
+          <Tooltip title={t("unstageSelectedFiles")}>
             <Button
               icon={<DownloadOutlined />}
               disabled={selectedStagedFiles.length === 0 || busy}
               onClick={() => onUnstage(selectedStagedFiles)}
             />
           </Tooltip>
-          <Tooltip title="回滚选中文件变更">
+          <Tooltip title={t("discardSelectedFiles")}>
             <Button
               danger
               icon={<RollbackOutlined />}
@@ -156,21 +158,21 @@ export function ChangedFiles({
               onClick={() => onDiscard(selectedFiles)}
             />
           </Tooltip>
-          <Tooltip title="选择全部文件">
+          <Tooltip title={t("selectAllFiles")}>
             <Button
               icon={<CheckSquareOutlined />}
               disabled={files.length === 0}
               onClick={() => onSelectionChange(files.map((file) => file.path))}
             />
           </Tooltip>
-          <Tooltip title="清空选择">
+          <Tooltip title={t("clearSelection")}>
             <Button
               icon={<ClearOutlined />}
               disabled={selectedFiles.length === 0}
               onClick={() => onSelectionChange([])}
             />
           </Tooltip>
-          <Tooltip title="刷新状态">
+          <Tooltip title={t("refreshStatus")}>
             <Button icon={<ReloadOutlined />} onClick={onRefresh} />
           </Tooltip>
         </Space>
@@ -181,7 +183,7 @@ export function ChangedFiles({
           type="error"
           showIcon
           className="conflict-alert"
-          message="当前仓库存在合并冲突，请手动解决冲突文件后再提交。"
+          message={t("conflictAlert")}
         />
       )}
 
@@ -204,7 +206,7 @@ export function ChangedFiles({
         <Empty
           className="empty-state"
           image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={status?.isClean ? "工作区干净" : "暂无变更"}
+          description={status?.isClean ? t("cleanWorkingTree") : t("noChanges")}
         />
       )}
     </section>

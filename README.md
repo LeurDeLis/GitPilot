@@ -64,6 +64,12 @@
 - **实时日志** — 记录最近 300 条 Git 操作，含命令、执行结果和错误信息
 - **日志清空** — 支持一键清空日志
 
+### 🎨 界面与偏好
+- **中英文切换** — 支持中文和 English 两种界面语言，选择会保存在本地
+- **双主题** — 默认使用浅色主题，也可切换到深色主题，选择会保存在本地
+- **自定义菜单** — 左上角 GitPilot 菜单提供打开、克隆、主题、语言和刷新入口，替代 Electron 默认菜单
+- **日志布局** — 操作日志使用固定列宽，过长的 Git 命令以省略号显示，避免窄面板自动换行
+
 ## 🏗️ 技术架构
 
 ```
@@ -105,6 +111,7 @@
 ```text
 GitPilot/
 ├── package.json                  # 项目配置及依赖
+├── app.py                        # Python 启动入口（调用 npm run dev）
 ├── vite.config.ts                # Vite 构建配置
 ├── tsconfig.json                 # 渲染进程 TS 配置
 ├── tsconfig.electron.json        # 主进程 TS 配置
@@ -118,6 +125,10 @@ GitPilot/
 └── src/
     ├── main.tsx                  # React 入口
     ├── App.tsx                   # 根组件及页面路由
+    ├── i18n.tsx                  # 中英文翻译与语言状态
+    ├── theme.tsx                 # 浅色/深色主题状态
+    ├── icon/
+    │   └── app_icon.png          # 左上角品牌图标
     ├── types/
     │   ├── git.ts                # 共享类型定义
     │   └── global.d.ts           # 全局类型声明
@@ -150,6 +161,7 @@ GitPilot/
 
 - **Node.js** 18+
 - **Git** 已安装并添加到系统 PATH
+- **Python** 3（仅使用 `app.py` 启动时需要）
 
 ### 安装依赖
 
@@ -162,6 +174,8 @@ npm install
 ```bash
 npm run dev
 ```
+
+也可以运行 `python app.py`，它会调用同一套 `npm run dev` 开发流程。
 
 该命令会并行启动：
 - **Vite Dev Server**：`http://127.0.0.1:5173`（React 热更新）

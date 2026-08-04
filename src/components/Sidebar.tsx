@@ -1,5 +1,6 @@
 import { ClockCircleOutlined, FolderOpenOutlined } from "@ant-design/icons";
 import { Button, Divider, Empty, List, Space, Tooltip, Typography } from "antd";
+import { useI18n } from "../i18n";
 import { BranchPanel } from "./BranchPanel";
 import type { BranchInfo, RepoInfo } from "../types/git";
 
@@ -24,12 +25,14 @@ export function Sidebar({
   onDeleteBranch,
   onMerge
 }: SidebarProps) {
+  const { t } = useI18n();
+
   return (
     <aside className="sidebar">
       <div className="section-title-row">
         <Space size={6}>
           <ClockCircleOutlined />
-          <Typography.Text strong>最近仓库</Typography.Text>
+          <Typography.Text strong>{t("recentRepositories")}</Typography.Text>
         </Space>
       </div>
       {recentRepos.length > 0 ? (
@@ -44,7 +47,7 @@ export function Sidebar({
                   <span className="recent-name">{repo.name}</span>
                   <span className="recent-path">{repo.path}</span>
                 </button>
-                <Tooltip title="打开">
+                <Tooltip title={t("open")}>
                   <Button
                     size="small"
                     icon={<FolderOpenOutlined />}
@@ -57,7 +60,7 @@ export function Sidebar({
           }}
         />
       ) : (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无最近仓库" />
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("noRecentRepositories")} />
       )}
 
       <Divider />
@@ -72,7 +75,7 @@ export function Sidebar({
           onMerge={onMerge}
         />
       ) : (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="打开仓库后显示分支" />
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("openRepositoryToSeeBranches")} />
       )}
     </aside>
   );

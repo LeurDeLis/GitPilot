@@ -1,6 +1,7 @@
 import { SendOutlined } from "@ant-design/icons";
 import { Button, Form, Input, Space, Typography } from "antd";
 import { useState } from "react";
+import { useI18n } from "../i18n";
 
 type CommitPanelProps = {
   selectedCount: number;
@@ -17,6 +18,7 @@ export function CommitPanel({
 }: CommitPanelProps) {
   const [form] = Form.useForm<{ message: string }>();
   const [submitting, setSubmitting] = useState(false);
+  const { t } = useI18n();
 
   const submit = async () => {
     const values = await form.validateFields();
@@ -35,9 +37,9 @@ export function CommitPanel({
     <section className="panel commit-panel">
       <div className="panel-header compact">
         <div>
-          <Typography.Title level={4}>提交</Typography.Title>
+          <Typography.Title level={4}>{t("commit")}</Typography.Title>
           <Typography.Text type="secondary">
-            已选择 {selectedCount} / {totalCount} 个文件
+            {t("selectedFiles", { selected: selectedCount, total: totalCount })}
           </Typography.Text>
         </div>
       </div>
@@ -45,15 +47,15 @@ export function CommitPanel({
       <Form form={form} layout="vertical" onFinish={submit}>
         <Form.Item
           name="message"
-          label="Commit message"
+          label={t("commitMessage")}
           rules={[
-            { required: true, message: "Commit message 不能为空" },
+            { required: true, message: t("commitMessageRequired") },
             {
               validator: (_rule, value?: string) => {
                 if (!value || value.trim().length > 0) {
                   return Promise.resolve();
                 }
-                return Promise.reject(new Error("Commit message 不能为空"));
+                return Promise.reject(new Error(t("commitMessageRequired")));
               }
             }
           ]}
@@ -62,7 +64,7 @@ export function CommitPanel({
             rows={4}
             maxLength={500}
             showCount
-            placeholder="输入本次提交说明"
+            placeholder={t("commitMessagePlaceholder")}
             disabled={disabled || submitting}
           />
         </Form.Item>
@@ -74,7 +76,7 @@ export function CommitPanel({
             loading={submitting}
             disabled={disabled || selectedCount === 0}
           >
-            提交选中文件
+            {t("commitSelectedFiles")}
           </Button>
         </Space>
       </Form>

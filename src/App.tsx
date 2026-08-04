@@ -18,8 +18,11 @@ import {
   Tag,
   Table,
   Typography,
+  theme as antdTheme,
   message
 } from "antd";
+import enUS from "antd/locale/en_US";
+import zhCN from "antd/locale/zh_CN";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { gitApi } from "./api/gitApi";
@@ -33,7 +36,10 @@ import { CloneDialog } from "./components/dialogs/CloneDialog";
 import { CreateBranchDialog } from "./components/dialogs/CreateBranchDialog";
 import { MergeDialog } from "./components/dialogs/MergeDialog";
 import { RemoteDialog } from "./components/dialogs/RemoteDialog";
+import type { Language } from "./i18n";
+import { useI18n } from "./i18n";
 import { useRepoStore } from "./store/repoStore";
+import { useTheme } from "./theme";
 import type { CommitDetail, CommitFile, CommitItem, GitResult, RemoteInfo } from "./types/git";
 import { formatDate, statusColor, statusText } from "./utils/format";
 
@@ -45,30 +51,36 @@ type RemoteDialogState = {
   remote?: RemoteInfo;
 };
 
-const commitFileColumns: ColumnsType<CommitFile> = [
-  {
-    title: "状态",
-    dataIndex: "status",
-    width: 100,
-    render: (status: CommitFile["status"]) => <Tag color={statusColor(status)}>{statusText(status)}</Tag>
-  },
-  {
-    title: "文件",
-    dataIndex: "path",
-    render: (_value, record) => (
-      <Space direction="vertical" size={0}>
-        <Typography.Text>{record.path}</Typography.Text>
-        {record.originalPath && (
-          <Typography.Text type="secondary">原路径：{record.originalPath}</Typography.Text>
-        )}
-      </Space>
-    )
-  }
-];
+function createCommitFileColumns(language: Language, translateText: (key: string, params?: Record<string, string | number>) => string): ColumnsType<CommitFile> {
+  return [
+    {
+      title: translateText("status"),
+      dataIndex: "status",
+      width: 100,
+      render: (status: CommitFile["status"]) => <Tag color={statusColor(status)}>{statusText(status, language)}</Tag>
+    },
+    {
+      title: translateText("changedFiles"),
+      dataIndex: "path",
+      render: (_value, record) => (
+        <Space direction="vertical" size={0}>
+          <Typography.Text>{record.path}</Typography.Text>
+          {record.originalPath && (
+            <Typography.Text type="secondary">
+              {translateText("originalPath", { path: record.originalPath })}
+            </Typography.Text>
+          )}
+        </Space>
+      )
+    }
+  ];
+}
 
 function App() {
   const [messageApi, contextHolder] = message.useMessage();
   const [modal, modalContextHolder] = Modal.useModal();
+  const { language, setLanguage, t } = useI18n();
+  const { theme, setTheme } = useTheme();
   const [cloneOpen, setCloneOpen] = useState(false);
   const [createBranchOpen, setCreateBranchOpen] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
@@ -138,7 +150,7 @@ function App() {
       setRecentRepos(recent);
       setLogs(nextLogs);
     } catch (error) {
-      showError(error, "加载应用数据失败");
+      showError(error, t("loadAppDataFailed"));
     }
   };
 
@@ -194,7 +206,7 @@ function App() {
       setLogs(nextLogs);
       setRecentRepos(nextRecent);
     } catch (error) {
-      showError(error, "刷新仓库失败");
+      showError(error, t("refreshRepositoryFailed"));
     } finally {
       setBusy(false);
     }
@@ -206,9 +218,9 @@ function App() {
       const repo = await gitApi.openRepo(repoPath);
       setRepoInfo(repo);
       await refreshRepository(repo.path);
-      messageApi.success("仓库已打开");
+      messageApi.success(t("repositoryOpened"));
     } catch (error) {
-      showError(error, "打开仓库失败");
+      showError(error, t("openRepositoryFailed"));
     } finally {
       setBusy(false);
     }
@@ -221,7 +233,7 @@ function App() {
         await openRepoByPath(directory);
       }
     } catch (error) {
-      showError(error, "选择目录失败");
+      showError(error, t("selectDirectory"));
     }
   };
 
@@ -231,14 +243,14 @@ function App() {
       const result = await gitApi.cloneRepo(repoUrl, targetDir);
       await refreshLogs();
       if (!result.success) {
-        showGitResultError(result, "克隆失败");
+        showGitResultError(result, t("cloneFailed"));
         return;
       }
       setCloneOpen(false);
       await openRepoByPath(targetDir);
-      messageApi.success("克隆完成");
+      messageApi.success(t("cloneCompleted"));
     } catch (error) {
-      showError(error, "克隆失败");
+      showError(error, t("cloneFailed"));
     } finally {
       setBusy(false);
     }
@@ -263,11 +275,11 @@ function App() {
           showConflictModal(result.conflictFiles);
         } else if (result.requiresUpstream) {
           modal.warning({
-            title: "需要设置 upstream",
+            title: t("upstreamRequired"),
             content: result.error
           });
         } else {
-          showGitResultError(result, `${label}失败`);
+          showGitResultError(result, t("actionFailed", { label }));
         }
         return;
       }
@@ -275,7 +287,7 @@ function App() {
       messageApi.success(successMessage);
       await refreshRepository(repoInfo.path);
     } catch (error) {
-      showError(error, `${label}失败`);
+      showError(error, t("actionFailed", { label }));
     } finally {
       setBusy(false);
     }
@@ -291,14 +303,14 @@ function App() {
       const result = await gitApi.commit(repoInfo.path, selectedFiles, commitMessage);
       await refreshLogs();
       if (!result.success) {
-        showGitResultError(result, "提交失败");
+        showGitResultError(result, t("commitFailed"));
         return false;
       }
-      messageApi.success("提交成功");
+      messageApi.success(t("commitCompleted"));
       await refreshRepository(repoInfo.path);
       return true;
     } catch (error) {
-      showError(error, "提交失败");
+      showError(error, t("commitFailed"));
       return false;
     } finally {
       setBusy(false);
@@ -315,14 +327,14 @@ function App() {
       const result = await gitApi.createBranch(repoInfo.path, branchName);
       await refreshLogs();
       if (!result.success) {
-        showGitResultError(result, "创建分支失败");
+        showGitResultError(result, t("branchCreateFailed"));
         return;
       }
       setCreateBranchOpen(false);
-      messageApi.success("分支已创建");
+      messageApi.success(t("branchCreated"));
       await refreshRepository(repoInfo.path);
     } catch (error) {
-      showError(error, "创建分支失败");
+      showError(error, t("branchCreateFailed"));
     } finally {
       setBusy(false);
     }
@@ -335,9 +347,9 @@ function App() {
 
     if (status && !status.isClean) {
       const confirmed = await confirm({
-        title: "当前有未提交修改",
-        content: "切换分支可能失败或影响工作区，请确认已了解当前变更状态。",
-        okText: "继续切换"
+        title: t("uncommittedChangesTitle"),
+        content: t("uncommittedChangesDescription"),
+        okText: t("continueSwitch")
       });
       if (!confirmed) {
         return;
@@ -345,9 +357,9 @@ function App() {
     }
 
     await runGitAction(
-      "切换分支",
+      t("switchBranch"),
       () => gitApi.checkoutBranch(repoInfo.path, branchName),
-      "分支已切换"
+      t("branchSwitched")
     );
   };
 
@@ -357,9 +369,9 @@ function App() {
     }
 
     const confirmed = await confirm({
-      title: `删除本地分支 ${branchName}`,
-      content: "该操作会执行 git branch -d。未合并分支会被 Git 拒绝删除。",
-      okText: "删除",
+      title: t("deleteBranchTitle", { branch: branchName }),
+      content: t("deleteBranchDescription"),
+      okText: t("delete"),
       danger: true
     });
 
@@ -368,9 +380,9 @@ function App() {
     }
 
     await runGitAction(
-      "删除分支",
+      t("deleteLocalBranch"),
       () => gitApi.deleteBranch(repoInfo.path, branchName),
-      "分支已删除"
+      t("branchDeleted")
     );
   };
 
@@ -379,9 +391,9 @@ function App() {
       return;
     }
     await runGitAction(
-      "合并分支",
+      t("mergeBranch"),
       () => gitApi.merge(repoInfo.path, branchName),
-      "合并成功"
+      t("mergeCompleted")
     );
     setMergeOpen(false);
   };
@@ -396,7 +408,7 @@ function App() {
       setCommitDetailOpen(true);
       await refreshLogs();
     } catch (error) {
-      showError(error, "获取提交详情失败");
+      showError(error, t("errorLoadCommitDetail"));
     }
   };
 
@@ -413,15 +425,15 @@ function App() {
 
       await refreshLogs();
       if (!result.success) {
-        showGitResultError(result, remoteDialog.mode === "add" ? "新增 remote 失败" : "修改 remote 失败");
+        showGitResultError(result, remoteDialog.mode === "add" ? t("addRemoteFailed") : t("editRemoteFailed"));
         return;
       }
 
       setRemoteDialog({ open: false, mode: "add" });
-      messageApi.success(remoteDialog.mode === "add" ? "Remote 已新增" : "Remote 已更新");
+      messageApi.success(remoteDialog.mode === "add" ? t("remoteAdded") : t("remoteUpdated"));
       await refreshRepository(repoInfo.path);
     } catch (error) {
-      showError(error, "保存 remote 失败");
+      showError(error, t("errorSaveRemote"));
     } finally {
       setBusy(false);
     }
@@ -433,9 +445,9 @@ function App() {
     }
 
     const confirmed = await confirm({
-      title: `删除 remote ${remote.name}`,
-      content: "该操作会执行 git remote remove。",
-      okText: "删除",
+      title: t("deleteRemoteTitle", { remote: remote.name }),
+      content: t("deleteRemoteDescription"),
+      okText: t("delete"),
       danger: true
     });
     if (!confirmed) {
@@ -443,9 +455,9 @@ function App() {
     }
 
     await runGitAction(
-      "删除 remote",
+      t("delete"),
       () => gitApi.removeRemote(repoInfo.path, remote.name),
-      "Remote 已删除"
+      t("remoteRemoved")
     );
   };
 
@@ -455,13 +467,13 @@ function App() {
     try {
       const result = await gitApi.stageFiles(repoInfo.path, files);
       if (!result.success) {
-        showGitResultError(result, "暂存失败");
+        showGitResultError(result, t("stageFailed"));
         return;
       }
-      messageApi.success(`已暂存 ${files.length} 个文件`);
+      messageApi.success(t("stageCompleted", { count: files.length }));
       await refreshRepository(repoInfo.path);
     } catch (error) {
-      showError(error, "暂存失败");
+      showError(error, t("stageFailed"));
     } finally {
       setBusy(false);
     }
@@ -473,13 +485,13 @@ function App() {
     try {
       const result = await gitApi.unstageFiles(repoInfo.path, files);
       if (!result.success) {
-        showGitResultError(result, "取消暂存失败");
+        showGitResultError(result, t("unstageFailed"));
         return;
       }
-      messageApi.success(`已取消暂存 ${files.length} 个文件`);
+      messageApi.success(t("unstageCompleted", { count: files.length }));
       await refreshRepository(repoInfo.path);
     } catch (error) {
-      showError(error, "取消暂存失败");
+      showError(error, t("unstageFailed"));
     } finally {
       setBusy(false);
     }
@@ -489,9 +501,9 @@ function App() {
     if (!repoInfo || files.length === 0) return;
 
     const confirmed = await confirm({
-      title: `回滚 ${files.length} 个文件变更`,
-      content: "此操作会丢弃所选文件的未提交修改，并删除所选未跟踪文件。该操作无法从应用内撤销。",
-      okText: "确认回滚",
+      title: t("discardFilesTitle", { count: files.length }),
+      content: t("discardFilesDescription"),
+      okText: t("confirmDiscard"),
       danger: true
     });
     if (!confirmed) {
@@ -503,13 +515,13 @@ function App() {
       const result = await gitApi.discardFiles(repoInfo.path, files);
       await refreshLogs();
       if (!result.success) {
-        showGitResultError(result, "回滚失败");
+        showGitResultError(result, t("discardFailed"));
         return;
       }
-      messageApi.success(`已回滚 ${files.length} 个文件变更`);
+      messageApi.success(t("discardCompleted", { count: files.length }));
       await refreshRepository(repoInfo.path);
     } catch (error) {
-      showError(error, "回滚失败");
+      showError(error, t("discardFailed"));
     } finally {
       setBusy(false);
     }
@@ -530,7 +542,7 @@ function App() {
       content: (
         <Space direction="vertical" className="modal-error-content">
           <Typography.Text code>{result.command}</Typography.Text>
-          <Typography.Text type="danger">{result.error || "Git 命令执行失败"}</Typography.Text>
+          <Typography.Text type="danger">{result.error || t("errorGitCommand")}</Typography.Text>
           {result.output && <pre>{result.output}</pre>}
         </Space>
       )
@@ -539,18 +551,18 @@ function App() {
 
   const showConflictModal = (conflictFiles: string[]) => {
     modal.warning({
-      title: "合并发生冲突",
+      title: t("conflictTitle"),
       width: 620,
       content: (
         <Space direction="vertical" className="modal-error-content">
-          <Typography.Text>以下文件存在冲突，请手动解决后重新提交：</Typography.Text>
+          <Typography.Text>{t("conflictDescription")}</Typography.Text>
           <ul className="conflict-list">
             {conflictFiles.map((file) => (
               <li key={file}>{file}</li>
             ))}
           </ul>
           <Typography.Text type="secondary">
-            解决冲突后执行提交即可完成合并。
+            {t("conflictResolvedHint")}
           </Typography.Text>
         </Space>
       )
@@ -567,7 +579,7 @@ function App() {
       title: options.title,
       content: options.content,
       okText: options.okText,
-      cancelText: "取消",
+      cancelText: t("cancel"),
       okButtonProps: { danger: options.danger },
       onOk: () => resolve(true),
       onCancel: () => resolve(false)
@@ -579,14 +591,14 @@ function App() {
       <div className="welcome-content">
         <Typography.Title level={2}>GitPilot</Typography.Title>
         <Typography.Paragraph type="secondary">
-          打开本地 Git 仓库，或从远程地址克隆一个新仓库开始管理。
+          {t("welcomeDescription")}
         </Typography.Paragraph>
         <Space size={12}>
           <Button type="primary" size="large" icon={<FolderOpenOutlined />} onClick={handleOpenDirectory}>
-            打开本地仓库
+            {t("openRepository")}
           </Button>
           <Button size="large" icon={<ApiOutlined />} onClick={() => setCloneOpen(true)}>
-            克隆远程仓库
+            {t("cloneRepository")}
           </Button>
         </Space>
       </div>
@@ -599,7 +611,7 @@ function App() {
       <div className="remote-panel">
         <div className="tab-toolbar">
           <Typography.Text type="secondary">
-            {fetchRemotes.length} 个 remote
+            {t("remoteCount", { count: fetchRemotes.length })}
           </Typography.Text>
           <Button
             size="small"
@@ -607,7 +619,7 @@ function App() {
             icon={<PlusOutlined />}
             onClick={() => setRemoteDialog({ open: true, mode: "add" })}
           >
-            新增
+            {t("add")}
           </Button>
         </div>
         {fetchRemotes.length > 0 ? (
@@ -639,7 +651,7 @@ function App() {
             )}
           />
         ) : (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无 remote" />
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("noRemote")} />
         )}
       </div>
     );
@@ -652,8 +664,8 @@ function App() {
           <Alert
             type="error"
             showIcon
-            message="仓库存在冲突文件"
-            description="请手动解决冲突后重新提交。冲突文件会在变更列表中标记为“冲突”。"
+            message={t("conflictFilesTitle")}
+            description={t("conflictFilesDescription")}
           />
         )}
         <ChangedFiles
@@ -679,17 +691,17 @@ function App() {
           items={[
             {
               key: "history",
-              label: "提交历史",
+              label: t("commitHistory"),
               children: <CommitHistory commits={commits} onSelectCommit={handleSelectCommit} />
             },
             {
               key: "remotes",
-              label: "Remote",
+              label: t("remote"),
               children: renderRemotePanel()
             },
             {
               key: "logs",
-              label: "操作日志",
+              label: t("operationLog"),
               children: <OperationLog logs={logs} onClear={clearLogs} />
             }
           ]}
@@ -700,16 +712,19 @@ function App() {
 
   return (
     <ConfigProvider
+      locale={language === "zh-CN" ? zhCN : enUS}
       theme={{
+        algorithm: theme === "dark" ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
         token: {
-          colorPrimary: "#0f766e",
-          colorInfo: "#0f766e",
-          colorLink: "#0f766e",
-          colorText: "#1f2b2b",
-          colorTextSecondary: "#6b7a78",
-          colorBorder: "#d9e4e1",
-          colorBgLayout: "#f2f5f4",
-          colorBgContainer: "#ffffff",
+          colorPrimary: theme === "dark" ? "#56c5b5" : "#0f766e",
+          colorInfo: theme === "dark" ? "#56c5b5" : "#0f766e",
+          colorLink: theme === "dark" ? "#7ad7c9" : "#0f766e",
+          colorText: theme === "dark" ? "#e7f0ee" : "#1f2b2b",
+          colorTextSecondary: theme === "dark" ? "#9eb1ac" : "#6b7a78",
+          colorBorder: theme === "dark" ? "#334641" : "#d9e4e1",
+          colorBgLayout: theme === "dark" ? "#121817" : "#f2f5f4",
+          colorBgContainer: theme === "dark" ? "#19211f" : "#ffffff",
+          colorBgElevated: theme === "dark" ? "#202b28" : "#ffffff",
           borderRadius: 7,
           fontFamily: '"Avenir Next", "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif'
         }
@@ -722,10 +737,14 @@ function App() {
           <TopBar
             repoInfo={repoInfo}
             busy={busy}
+            language={language}
+            theme={theme}
+            onLanguageChange={setLanguage}
+            onThemeChange={setTheme}
             onOpenRepo={handleOpenDirectory}
             onCloneRepo={() => setCloneOpen(true)}
-            onPull={() => runGitAction("Pull", () => gitApi.pull(repoInfo!.path), "Pull 完成")}
-            onPush={() => runGitAction("Push", () => gitApi.push(repoInfo!.path), "Push 完成")}
+            onPull={() => runGitAction(t("pull"), () => gitApi.pull(repoInfo!.path), t("actionCompleted", { label: t("pull") }))}
+            onPush={() => runGitAction(t("push"), () => gitApi.push(repoInfo!.path), t("actionCompleted", { label: t("push") }))}
             onRefresh={() => refreshRepository()}
           />
         </Header>
@@ -779,7 +798,7 @@ function App() {
         onSubmit={handleSaveRemote}
       />
       <Modal
-        title="提交详情"
+        title={t("commitDetail")}
         open={commitDetailOpen}
         onCancel={() => setCommitDetailOpen(false)}
         footer={null}
@@ -790,20 +809,20 @@ function App() {
             <Space wrap>
               <Typography.Text code>{commitDetail.shortHash}</Typography.Text>
               <Typography.Text>{commitDetail.author}</Typography.Text>
-              <Typography.Text type="secondary">{formatDate(commitDetail.date)}</Typography.Text>
+              <Typography.Text type="secondary">{formatDate(commitDetail.date, language)}</Typography.Text>
             </Space>
             <Typography.Title level={5}>{commitDetail.message}</Typography.Title>
             {commitDetail.body && <Typography.Paragraph>{commitDetail.body}</Typography.Paragraph>}
             <Table<CommitFile>
               rowKey={(record) => `${record.status}:${record.path}`}
               size="small"
-              columns={commitFileColumns}
+              columns={createCommitFileColumns(language, t)}
               dataSource={commitDetail.files}
               pagination={false}
             />
           </Space>
         ) : (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无详情" />
+          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("noCommitDetail")} />
         )}
       </Modal>
     </ConfigProvider>

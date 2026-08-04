@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu } from "electron";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { GitService } from "./gitService";
@@ -11,6 +11,7 @@ type Settings = {
 const MAX_RECENT_REPOS = 12;
 const APP_NAME = "GitPilot";
 const APP_ICON = path.join(__dirname, "../../build/icon.ico");
+const DEV_RENDERER_PORT = Number(process.env.GITPILOT_RENDERER_PORT) || 5173;
 const operationLogs: OperationLogItem[] = [];
 
 let mainWindow: BrowserWindow | null = null;
@@ -24,7 +25,7 @@ function createWindow(): void {
     minHeight: 720,
     title: APP_NAME,
     icon: APP_ICON,
-    backgroundColor: "#f4f6f8",
+    backgroundColor: "#f2f5f4",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -36,7 +37,7 @@ function createWindow(): void {
   if (app.isPackaged) {
     mainWindow.loadFile(path.join(__dirname, "../../dist/index.html"));
   } else {
-    mainWindow.loadURL("http://127.0.0.1:5173");
+    mainWindow.loadURL(`http://127.0.0.1:${DEV_RENDERER_PORT}`);
     if (process.env.GITPILOT_OPEN_DEVTOOLS === "1") {
       mainWindow.webContents.openDevTools({ mode: "detach" });
     }
@@ -51,6 +52,9 @@ app.setName(APP_NAME);
 app.setAppUserModelId("com.gitpilot.app");
 
 app.whenReady().then(async () => {
+  // The renderer owns the localized, theme-aware application menu.
+  Menu.setApplicationMenu(null);
+
   gitService = new GitService((item) => {
     operationLogs.unshift({
       ...item,

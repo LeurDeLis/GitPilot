@@ -6,6 +6,7 @@ import {
   SwapOutlined
 } from "@ant-design/icons";
 import { Button, Empty, List, Space, Tag, Tooltip, Typography } from "antd";
+import { useI18n } from "../i18n";
 import type { BranchInfo } from "../types/git";
 
 type BranchPanelProps = {
@@ -25,15 +26,17 @@ export function BranchPanel({
   onDeleteBranch,
   onMerge
 }: BranchPanelProps) {
+  const { t } = useI18n();
+
   return (
     <div className="branch-panel">
       <div className="section-title-row">
-        <Typography.Text strong>本地分支</Typography.Text>
+        <Typography.Text strong>{t("localBranches")}</Typography.Text>
         <Space size={4}>
-          <Tooltip title="创建分支">
+          <Tooltip title={t("createBranch")}>
             <Button size="small" icon={<PlusOutlined />} onClick={onCreateBranch} />
           </Tooltip>
-          <Tooltip title="合并分支到当前分支">
+          <Tooltip title={t("mergeBranchIntoCurrent")}>
             <Button size="small" icon={<RetweetOutlined />} onClick={onMerge} />
           </Tooltip>
         </Space>
@@ -49,7 +52,7 @@ export function BranchPanel({
               <List.Item
                 className={active ? "branch-item active" : "branch-item"}
                 actions={[
-                  <Tooltip title="切换分支" key="checkout">
+                  <Tooltip title={t("switchBranch")} key="checkout">
                     <Button
                       size="small"
                       type="text"
@@ -58,7 +61,7 @@ export function BranchPanel({
                       onClick={() => onCheckoutBranch(branch)}
                     />
                   </Tooltip>,
-                  <Tooltip title="删除本地分支" key="delete">
+                  <Tooltip title={t("deleteLocalBranch")} key="delete">
                     <Button
                       size="small"
                       type="text"
@@ -73,18 +76,18 @@ export function BranchPanel({
                 <Space size={6}>
                   <GitlabOutlined />
                   <Typography.Text ellipsis>{branch}</Typography.Text>
-                  {active && <Tag color="processing">当前</Tag>}
+                  {active && <Tag color="processing">{t("current")}</Tag>}
                 </Space>
               </List.Item>
             );
           }}
         />
       ) : (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无本地分支" />
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("noLocalBranches")} />
       )}
 
       <Typography.Text strong className="remote-branch-title">
-        远程分支
+        {t("remoteBranches")}
       </Typography.Text>
       {branches.remote.length > 0 ? (
         <List
@@ -100,7 +103,7 @@ export function BranchPanel({
           )}
         />
       ) : (
-        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无远程分支" />
+        <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("noRemoteBranches")} />
       )}
     </div>
   );

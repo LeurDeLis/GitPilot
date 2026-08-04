@@ -1,6 +1,7 @@
 import { FolderOpenOutlined } from "@ant-design/icons";
 import { Button, Form, Input, Modal, Space } from "antd";
 import { useEffect } from "react";
+import { useI18n } from "../../i18n";
 import { deriveRepoName } from "../../utils/format";
 
 type CloneDialogProps = {
@@ -20,6 +21,7 @@ export function CloneDialog({
 }: CloneDialogProps) {
   const [form] = Form.useForm<{ repoUrl: string; targetDir: string }>();
   const repoUrl = Form.useWatch("repoUrl", form);
+  const { t } = useI18n();
 
   useEffect(() => {
     if (!open) {
@@ -44,38 +46,38 @@ export function CloneDialog({
 
   return (
     <Modal
-      title="克隆远程仓库"
+      title={t("cloneRepository")}
       open={open}
       onCancel={onCancel}
       onOk={submit}
       confirmLoading={busy}
-      okText="开始克隆"
-      cancelText="取消"
+      okText={t("startClone")}
+      cancelText={t("cancel")}
       destroyOnClose
     >
       <Form form={form} layout="vertical">
         <Form.Item
           name="repoUrl"
-          label="Git 仓库地址"
+          label={t("cloneUrl")}
           rules={[
-            { required: true, message: "请输入 Git 仓库地址" },
-            { whitespace: true, message: "Git 仓库地址不能为空" }
+            { required: true, message: t("repoUrlRequired") },
+            { whitespace: true, message: t("repoUrlEmpty") }
           ]}
         >
-          <Input placeholder="https://github.com/user/repo.git 或 git@github.com:user/repo.git" />
+          <Input placeholder="https://github.com/user/repo.git or git@github.com:user/repo.git" />
         </Form.Item>
         <Form.Item
           name="targetDir"
-          label="目标目录"
+          label={t("targetDirectory")}
           rules={[
-            { required: true, message: "请选择或输入目标目录" },
-            { whitespace: true, message: "目标目录不能为空" }
+            { required: true, message: t("targetDirectoryRequired") },
+            { whitespace: true, message: t("targetDirectoryEmpty") }
           ]}
         >
           <Space.Compact className="full-width">
-            <Input placeholder="例如 D:\\Projects\\repo" />
+            <Input placeholder="D:\\Projects\\repo" />
             <Button icon={<FolderOpenOutlined />} onClick={chooseTarget}>
-              选择父目录
+              {t("chooseParentDirectory")}
             </Button>
           </Space.Compact>
         </Form.Item>
