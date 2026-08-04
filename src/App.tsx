@@ -702,9 +702,16 @@ function App() {
     <ConfigProvider
       theme={{
         token: {
-          colorPrimary: "#2563eb",
-          borderRadius: 8,
-          fontFamily: "Inter, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif"
+          colorPrimary: "#0f766e",
+          colorInfo: "#0f766e",
+          colorLink: "#0f766e",
+          colorText: "#1f2b2b",
+          colorTextSecondary: "#6b7a78",
+          colorBorder: "#d9e4e1",
+          colorBgLayout: "#f2f5f4",
+          colorBgContainer: "#ffffff",
+          borderRadius: 7,
+          fontFamily: '"Avenir Next", "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif'
         }
       }}
     >
