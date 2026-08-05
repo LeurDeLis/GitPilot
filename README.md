@@ -31,7 +31,8 @@
 ### 📁 仓库管理
 - **打开本地仓库** — 通过系统文件对话框选择本地 Git 仓库
 - **克隆远程仓库** — 输入远程 URL 和目标路径，一键克隆
-- **最近仓库** — 自动记录最近打开的 12 个仓库，支持快速切换
+- **最近仓库** — 自动记录最近打开的 12 个仓库，支持快速切换和单独移除列表条目
+- **失效记录处理** — 仓库目录不存在或已被移动时，可在居中确认弹窗中清理记录；此操作不会删除磁盘文件夹，移除当前仓库后会返回启动主页
 - **仓库状态总览** — 实时展示仓库名称、当前分支、远程地址、领先/落后提交数
 
 ### 📝 文件变更与提交
@@ -70,6 +71,7 @@
 - **双主题** — 默认使用浅色主题，也可切换到深色主题，选择会保存在本地
 - **自定义菜单** — 左上角 GitPilot 菜单提供打开、克隆、主题、语言和刷新入口，替代 Electron 默认菜单
 - **日志布局** — 操作日志使用固定列宽，过长的 Git 命令以省略号显示，避免窄面板自动换行
+- **确认弹窗** — 项目移除、目录失效和其他确认类弹窗统一显示在应用界面中央
 
 ## 🏗️ 技术架构
 
@@ -111,53 +113,25 @@
 
 ```text
 GitPilot/
-├── package.json                  # 项目配置及依赖
-├── app.py                        # Python 启动入口（自动选择可用端口）
-├── vite.config.ts                # Vite 构建配置
-├── tsconfig.json                 # 渲染进程 TS 配置
-├── tsconfig.electron.json        # 主进程 TS 配置
-├── index.html                    # 入口 HTML
-├── build/
-│   └── icon.ico                  # 应用图标
-├── electron/
-│   ├── main.ts                   # 主进程：窗口、IPC、持久化
-│   ├── preload.ts                # 预加载：contextBridge API
-│   └── gitService.ts             # Git 命令服务层
-├── scripts/
-│   ├── startElectron.cjs         # 启动已构建的 Electron 应用
-│   └── startDevApp.cjs            # 等待开发服务后启动 Electron
-└── src/
-    ├── main.tsx                  # React 入口
-    ├── App.tsx                   # 根组件及页面路由
-    ├── i18n.tsx                  # 中英文翻译与语言状态
-    ├── theme.tsx                 # 浅色/深色主题状态
-    ├── icon/
-    │   └── app_icon.png          # 左上角品牌图标
-    ├── types/
-    │   ├── git.ts                # 共享类型定义
-    │   └── global.d.ts           # 全局类型声明
-    ├── api/
-    │   └── gitApi.ts             # IPC API 适配层
-    ├── store/
-    │   └── repoStore.ts          # Zustand 状态管理
-    ├── utils/
-    │   └── format.ts             # 格式化工具函数
-    ├── styles/
-    │   └── global.css            # 全局样式
-    └── components/
-        ├── TopBar.tsx            # 顶部工具栏
-        ├── Sidebar.tsx           # 侧边栏（仓库 + 分支）
-        ├── ChangedFiles.tsx      # 变更文件列表
-        ├── CommitPanel.tsx       # 提交面板
-        ├── BranchPanel.tsx       # 分支面板
-        ├── CommitHistory.tsx     # 提交历史
-        ├── OperationLog.tsx      # 操作日志面板
-        └── dialogs/
-            ├── CloneDialog.tsx       # 克隆仓库弹窗
-            ├── CreateBranchDialog.tsx # 创建分支弹窗
-            ├── MergeDialog.tsx       # 合并分支弹窗
-            └── RemoteDialog.tsx      # Remote 编辑弹窗
+├── build/                 # 应用图标与 Windows 安装器资源
+├── electron/              # Electron 主进程、预加载桥接和 Git 服务
+├── scripts/               # 开发启动、生产启动与 Windows 打包脚本
+├── src/                   # React 渲染进程源码
+│   ├── api/               # 渲染进程与 Electron IPC 的 API 适配层
+│   ├── components/        # 界面组件与业务弹窗
+│   │   └── dialogs/       # 克隆、分支、合并和 Remote 等对话框
+│   ├── constants/         # 前后端共享常量
+│   ├── icon/              # 渲染界面使用的应用图标资源
+│   ├── store/             # Zustand 全局状态管理
+│   ├── styles/            # 全局样式与主题外观
+│   ├── types/             # Git、IPC 和全局 TypeScript 类型
+│   └── utils/             # 格式化等通用工具
+├── dist/                  # Vite 渲染进程构建产物
+├── dist-electron/         # Electron 主进程构建产物
+└── release/               # 安装版与绿色便携版输出目录
 ```
+
+`dist/`、`dist-electron/` 和 `release/` 会在构建或打包后生成；依赖、版本控制、IDE 配置和缓存目录未在上方列出。
 
 ## 🚀 快速开始
 
@@ -199,6 +173,16 @@ npm run dist
 ```
 
 构建产物输出到 `release/` 目录。
+
+### Release 下载
+
+最新稳定版本：[GitPilot v1.1.0](https://github.com/LeurDeLis/GitPilot/releases/latest)
+
+| 文件 | 类型 | 说明 |
+| --- | --- | --- |
+| `GitPilot Setup 1.1.0.exe` | Windows 安装版 | 支持自定义安装路径，并可选择是否创建桌面快捷方式 |
+| `GitPilot 1.1.0.exe` | Windows 绿色便携版 | 无需安装，下载后可直接运行 |
+
 
 ### Windows 安装包与绿色版
 

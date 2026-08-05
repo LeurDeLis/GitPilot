@@ -31,7 +31,8 @@
 ### 📁 Repository Management
 - **Open Local Repository** — Select a local Git repository via the native file dialog
 - **Clone Remote Repository** — Enter a remote URL and target path to clone with one click
-- **Recent Repositories** — Automatically records the last 12 opened repositories for quick switching
+- **Recent Repositories** — Automatically records the last 12 opened repositories for quick switching and supports removing individual entries
+- **Missing Repository Handling** — When a repository directory is missing or moved, its entry can be cleared from a centered confirmation dialog; this never deletes the folder on disk, and removing the active repository returns to the start page
 - **Repository Overview** — Real-time display of repository name, current branch, remote URL, and ahead/behind commit counts
 
 ### 📝 File Changes & Commits
@@ -70,6 +71,7 @@
 - **Two Themes** — Light is the default theme, with an optional dark theme; the selection is stored locally
 - **Custom Menu** — The GitPilot menu in the top-left provides open, clone, theme, language, and refresh actions instead of Electron's default menu
 - **Log Layout** — The operation log uses fixed columns, and long Git commands are truncated with an ellipsis instead of wrapping in a narrow panel
+- **Confirmation Dialogs** — Repository removal, missing-directory prompts, and other confirmation dialogs are centered in the application window
 
 ## 🏗️ Architecture
 
@@ -111,53 +113,25 @@
 
 ```text
 GitPilot/
-├── package.json                  # Project config & dependencies
-├── app.py                        # Python launcher (selects an available port)
-├── vite.config.ts                # Vite build configuration
-├── tsconfig.json                 # Renderer TS config
-├── tsconfig.electron.json        # Main process TS config
-├── index.html                    # Entry HTML
-├── build/
-│   └── icon.ico                  # Application icon
-├── electron/
-│   ├── main.ts                   # Main process: window, IPC, persistence
-│   ├── preload.ts                # Preload: contextBridge API
-│   └── gitService.ts             # Git command service layer
-├── scripts/
-│   ├── startElectron.cjs         # Launches the pre-built Electron app
-│   └── startDevApp.cjs            # Waits for dev services before launching Electron
-└── src/
-    ├── main.tsx                  # React entry point
-    ├── App.tsx                   # Root component & page routing
-    ├── i18n.tsx                  # Chinese/English translations and state
-    ├── theme.tsx                 # Light/dark theme state
-    ├── icon/
-    │   └── app_icon.png          # Top-left brand icon
-    ├── types/
-    │   ├── git.ts                # Shared type definitions
-    │   └── global.d.ts           # Global type declarations
-    ├── api/
-    │   └── gitApi.ts             # IPC API adapter layer
-    ├── store/
-    │   └── repoStore.ts          # Zustand state management
-    ├── utils/
-    │   └── format.ts             # Formatting utilities
-    ├── styles/
-    │   └── global.css            # Global styles
-    └── components/
-        ├── TopBar.tsx            # Top toolbar
-        ├── Sidebar.tsx           # Sidebar (repos + branches)
-        ├── ChangedFiles.tsx      # Changed files list
-        ├── CommitPanel.tsx       # Commit panel
-        ├── BranchPanel.tsx       # Branch panel
-        ├── CommitHistory.tsx     # Commit history
-        ├── OperationLog.tsx      # Operation log panel
-        └── dialogs/
-            ├── CloneDialog.tsx       # Clone repository dialog
-            ├── CreateBranchDialog.tsx # Create branch dialog
-            ├── MergeDialog.tsx       # Merge branch dialog
-            └── RemoteDialog.tsx      # Remote edit dialog
+├── build/                 # Application icons and Windows installer resources
+├── electron/              # Electron main process, preload bridge, and Git services
+├── scripts/               # Development startup, production startup, and Windows packaging scripts
+├── src/                   # React renderer source code
+│   ├── api/               # API adapter between the renderer and Electron IPC
+│   ├── components/        # Interface components and workflow dialogs
+│   │   └── dialogs/       # Clone, branch, merge, and remote dialogs
+│   ├── constants/         # Constants shared between processes
+│   ├── icon/              # Application icons used by the renderer
+│   ├── store/             # Zustand global state management
+│   ├── styles/            # Global styles and theme appearance
+│   ├── types/             # Git, IPC, and global TypeScript types
+│   └── utils/             # Shared utilities such as formatting helpers
+├── dist/                  # Vite renderer build output
+├── dist-electron/         # Electron main-process build output
+└── release/               # Installer and portable release artifacts
 ```
+
+`dist/`, `dist-electron/`, and `release/` are generated during builds or packaging. Dependency, version-control, IDE configuration, and cache directories are omitted above.
 
 ## 🚀 Getting Started
 
@@ -199,6 +173,16 @@ npm run dist
 ```
 
 Build artifacts are output to the `release/` directory.
+
+### Release Downloads
+
+Latest stable release: [GitPilot v1.1.0](https://github.com/LeurDeLis/GitPilot/releases/latest)
+
+| File | Type | Description |
+| --- | --- | --- |
+| `GitPilot Setup 1.1.0.exe` | Windows installer | Supports a custom installation directory and optional desktop shortcut |
+| `GitPilot 1.1.0.exe` | Windows portable build | No installation required; download and run directly |
+
 
 ### Windows Installer and Portable Build
 
