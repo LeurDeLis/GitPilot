@@ -18,8 +18,7 @@ import {
   Tag,
   Table,
   Typography,
-  theme as antdTheme,
-  message
+  theme as antdTheme
 } from "antd";
 import enUS from "antd/locale/en_US";
 import zhCN from "antd/locale/zh_CN";
@@ -30,6 +29,7 @@ import { ChangedFiles } from "./components/ChangedFiles";
 import { CommitHistory } from "./components/CommitHistory";
 import { CommitPanel } from "./components/CommitPanel";
 import { OperationLog } from "./components/OperationLog";
+import { useNotification } from "./components/NotificationCenter";
 import { Sidebar } from "./components/Sidebar";
 import { TopBar } from "./components/TopBar";
 import { CloneDialog } from "./components/dialogs/CloneDialog";
@@ -50,6 +50,16 @@ type RemoteDialogState = {
   mode: "add" | "edit";
   remote?: RemoteInfo;
 };
+
+function gitResultSummary(result: GitResult, fallback: string) {
+  const lines = (result.error || result.output)
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const fatalLine = [...lines].reverse().find((line) => /^fatal(?::|\s)/i.test(line));
+  const errorLine = lines.find((line) => /^error(?::|\s)/i.test(line));
+  return fatalLine || errorLine || lines[lines.length - 1] || fallback;
+}
 
 function createCommitFileColumns(language: Language, translateText: (key: string, params?: Record<string, string | number>) => string): ColumnsType<CommitFile> {
   return [
@@ -77,7 +87,7 @@ function createCommitFileColumns(language: Language, translateText: (key: string
 }
 
 function App() {
-  const [messageApi, contextHolder] = message.useMessage();
+  const notify = useNotification();
   const [modal, modalContextHolder] = Modal.useModal();
   const { language, setLanguage, t } = useI18n();
   const { theme, setTheme } = useTheme();
@@ -218,7 +228,7 @@ function App() {
       const repo = await gitApi.openRepo(repoPath);
       setRepoInfo(repo);
       await refreshRepository(repo.path);
-      messageApi.success(t("repositoryOpened"));
+      notify.success(t("repositoryOpened"));
     } catch (error) {
       showError(error, t("openRepositoryFailed"));
     } finally {
@@ -248,7 +258,7 @@ function App() {
       }
       setCloneOpen(false);
       await openRepoByPath(targetDir);
-      messageApi.success(t("cloneCompleted"));
+      notify.success(t("cloneCompleted"));
     } catch (error) {
       showError(error, t("cloneFailed"));
     } finally {
@@ -274,17 +284,14 @@ function App() {
         if (result.conflictFiles?.length) {
           showConflictModal(result.conflictFiles);
         } else if (result.requiresUpstream) {
-          modal.warning({
-            title: t("upstreamRequired"),
-            content: result.error
-          });
+          notify.warning(gitResultSummary(result, t("errorGitCommand")), t("upstreamRequired"));
         } else {
           showGitResultError(result, t("actionFailed", { label }));
         }
         return;
       }
 
-      messageApi.success(successMessage);
+      notify.success(successMessage);
       await refreshRepository(repoInfo.path);
     } catch (error) {
       showError(error, t("actionFailed", { label }));
@@ -306,7 +313,7 @@ function App() {
         showGitResultError(result, t("commitFailed"));
         return false;
       }
-      messageApi.success(t("commitCompleted"));
+      notify.success(t("commitCompleted"));
       await refreshRepository(repoInfo.path);
       return true;
     } catch (error) {
@@ -331,7 +338,7 @@ function App() {
         return;
       }
       setCreateBranchOpen(false);
-      messageApi.success(t("branchCreated"));
+      notify.success(t("branchCreated"));
       await refreshRepository(repoInfo.path);
     } catch (error) {
       showError(error, t("branchCreateFailed"));
@@ -453,7 +460,7 @@ function App() {
       }
 
       setRemoteDialog({ open: false, mode: "add" });
-      messageApi.success(remoteDialog.mode === "add" ? t("remoteAdded") : t("remoteUpdated"));
+      notify.success(remoteDialog.mode === "add" ? t("remoteAdded") : t("remoteUpdated"));
       await refreshRepository(repoInfo.path);
     } catch (error) {
       showError(error, t("errorSaveRemote"));
@@ -493,7 +500,7 @@ function App() {
         showGitResultError(result, t("stageFailed"));
         return;
       }
-      messageApi.success(t("stageCompleted", { count: files.length }));
+      notify.success(t("stageCompleted", { count: files.length }));
       await refreshRepository(repoInfo.path);
     } catch (error) {
       showError(error, t("stageFailed"));
@@ -511,7 +518,7 @@ function App() {
         showGitResultError(result, t("unstageFailed"));
         return;
       }
-      messageApi.success(t("unstageCompleted", { count: files.length }));
+      notify.success(t("unstageCompleted", { count: files.length }));
       await refreshRepository(repoInfo.path);
     } catch (error) {
       showError(error, t("unstageFailed"));
@@ -541,7 +548,7 @@ function App() {
         showGitResultError(result, t("discardFailed"));
         return;
       }
-      messageApi.success(t("discardCompleted", { count: files.length }));
+      notify.success(t("discardCompleted", { count: files.length }));
       await refreshRepository(repoInfo.path);
     } catch (error) {
       showError(error, t("discardFailed"));
@@ -556,40 +563,21 @@ function App() {
 
   const showError = (error: unknown, title: string) => {
     const content = error instanceof Error ? error.message : String(error);
-    messageApi.error(`${title}: ${content}`);
+    notify.error(content, title);
   };
 
   const showGitResultError = (result: GitResult, title: string) => {
-    modal.error({
-      title,
-      content: (
-        <Space direction="vertical" className="modal-error-content">
-          <Typography.Text code>{result.command}</Typography.Text>
-          <Typography.Text type="danger">{result.error || t("errorGitCommand")}</Typography.Text>
-          {result.output && <pre>{result.output}</pre>}
-        </Space>
-      )
-    });
+    notify.error(gitResultSummary(result, t("errorGitCommand")), title);
   };
 
   const showConflictModal = (conflictFiles: string[]) => {
-    modal.warning({
-      title: t("conflictTitle"),
-      width: 620,
-      content: (
-        <Space direction="vertical" className="modal-error-content">
-          <Typography.Text>{t("conflictDescription")}</Typography.Text>
-          <ul className="conflict-list">
-            {conflictFiles.map((file) => (
-              <li key={file}>{file}</li>
-            ))}
-          </ul>
-          <Typography.Text type="secondary">
-            {t("conflictResolvedHint")}
-          </Typography.Text>
-        </Space>
-      )
-    });
+    const visibleFiles = conflictFiles.slice(0, 3).join(", ");
+    const remainingCount = Math.max(0, conflictFiles.length - 3);
+    const fileSummary = remainingCount > 0 ? `${visibleFiles} (+${remainingCount})` : visibleFiles;
+    notify.warning(
+      `${t("conflictDescription")} ${fileSummary} ${t("conflictResolvedHint")}`,
+      t("conflictTitle")
+    );
   };
 
   const confirm = (options: {
@@ -753,7 +741,6 @@ function App() {
         }
       }}
     >
-      {contextHolder}
       {modalContextHolder}
       <Layout className="app-shell">
         <Header className="app-header">

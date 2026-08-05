@@ -138,25 +138,34 @@ export function ChangedFiles({
         <Space size={8}>
           <Tooltip title={t("stageSelectedFiles")}>
             <Button
+              className="changed-files-action-button"
               icon={<UploadOutlined />}
               disabled={selectedUnstagedFiles.length === 0 || busy}
               onClick={() => onStage(selectedUnstagedFiles)}
-            />
+            >
+              {t("stageSelectedAction")}
+            </Button>
           </Tooltip>
           <Tooltip title={t("unstageSelectedFiles")}>
             <Button
+              className="changed-files-action-button"
               icon={<DownloadOutlined />}
               disabled={selectedStagedFiles.length === 0 || busy}
               onClick={() => onUnstage(selectedStagedFiles)}
-            />
+            >
+              {t("unstageSelectedAction")}
+            </Button>
           </Tooltip>
           <Tooltip title={t("discardSelectedFiles")}>
             <Button
+              className="changed-files-action-button"
               danger
               icon={<RollbackOutlined />}
               disabled={selectedFiles.length === 0 || busy}
               onClick={() => onDiscard(selectedFiles)}
-            />
+            >
+              {t("discardSelectedAction")}
+            </Button>
           </Tooltip>
           <Tooltip title={t("selectAllFiles")}>
             <Button
