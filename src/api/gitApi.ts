@@ -23,6 +23,7 @@ export const gitApi: GitBridge = {
   getBranches: (repoPath) => getClient().getBranches(repoPath),
   createBranch: (repoPath, branchName) => getClient().createBranch(repoPath, branchName),
   checkoutBranch: (repoPath, branchName) => getClient().checkoutBranch(repoPath, branchName),
+  checkoutRemoteBranch: (repoPath, branchName) => getClient().checkoutRemoteBranch(repoPath, branchName),
   deleteBranch: (repoPath, branchName) => getClient().deleteBranch(repoPath, branchName),
   pull: (repoPath) => getClient().pull(repoPath),
   push: (repoPath) => getClient().push(repoPath),

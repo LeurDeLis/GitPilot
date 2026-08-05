@@ -45,12 +45,13 @@
 - **Branch Panel** — Displays local and remote branches in separate groups, with the current branch highlighted
 - **Create Branch** — Create a new local branch from the current HEAD
 - **Switch Branch** — Automatically detects uncommitted changes before switching and prompts for confirmation
+- **Switch Remote Branch** — Click a remote branch to run the equivalent of `git checkout <branch>`; if no same-named local branch exists, it is created and tracked automatically
 - **Delete Branch** — Safe deletion via `git branch -d`; unmerged branches are automatically rejected by Git
 - **Merge Branch** — Merge any local or remote branch into the current branch; conflicts are displayed in a conflict file list
 
 ### 🔄 Sync Operations
 - **Pull** — Pull remote updates with one click; conflicts trigger a popup showing the conflicted files
-- **Push** — Push local commits to remote; automatically detects upstream and provides guidance when missing
+- **Push** — Pushes according to the current local branch's upstream; when upstream is missing, it automatically matches a same-named remote branch
 
 ### 📜 Commit History
 - **History List** — Displays the most recent 50 commits with message, author, and timestamp
@@ -212,7 +213,7 @@ npm run dist:portable
 npm run dist:win
 ```
 
-All of these commands use the application icon from `src/icon/app_icon.png`; installer and portable artifacts are written to `release/`.
+All of these commands use the application icon from `src/icon/app_icon.png`; installer and portable artifacts are written to `release/`. The Windows installer lets users choose a custom installation directory and whether to create a desktop shortcut; the Start Menu shortcut is created by default.
 
 ### Other Commands
 

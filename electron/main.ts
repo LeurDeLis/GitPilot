@@ -120,6 +120,7 @@ function registerIpcHandlers(): void {
   ipcMain.handle("git:branches", safeHandle((_event, repoPath: string) => gitService.getBranches(repoPath)));
   ipcMain.handle("git:branch:create", safeHandle((_event, repoPath: string, branchName: string) => gitService.createBranch(repoPath, branchName)));
   ipcMain.handle("git:branch:checkout", safeHandle((_event, repoPath: string, branchName: string) => gitService.checkoutBranch(repoPath, branchName)));
+  ipcMain.handle("git:branch:checkout-remote", safeHandle((_event, repoPath: string, branchName: string) => gitService.checkoutRemoteBranch(repoPath, branchName)));
   ipcMain.handle("git:branch:delete", safeHandle((_event, repoPath: string, branchName: string) => gitService.deleteBranch(repoPath, branchName)));
   ipcMain.handle("git:pull", safeHandle((_event, repoPath: string) => gitService.pull(repoPath)));
   ipcMain.handle("git:push", safeHandle((_event, repoPath: string) => gitService.push(repoPath)));

@@ -12,8 +12,10 @@ import type { BranchInfo } from "../types/git";
 type BranchPanelProps = {
   branches: BranchInfo;
   currentBranch?: string;
+  busy: boolean;
   onCreateBranch(): void;
   onCheckoutBranch(branchName: string): void;
+  onCheckoutRemoteBranch(branchName: string): void;
   onDeleteBranch(branchName: string): void;
   onMerge(): void;
 };
@@ -21,8 +23,10 @@ type BranchPanelProps = {
 export function BranchPanel({
   branches,
   currentBranch,
+  busy,
   onCreateBranch,
   onCheckoutBranch,
+  onCheckoutRemoteBranch,
   onDeleteBranch,
   onMerge
 }: BranchPanelProps) {
@@ -57,7 +61,7 @@ export function BranchPanel({
                       size="small"
                       type="text"
                       icon={<SwapOutlined />}
-                      disabled={active}
+                      disabled={active || busy}
                       onClick={() => onCheckoutBranch(branch)}
                     />
                   </Tooltip>,
@@ -67,7 +71,7 @@ export function BranchPanel({
                       type="text"
                       danger
                       icon={<DeleteOutlined />}
-                      disabled={active}
+                      disabled={active || busy}
                       onClick={() => onDeleteBranch(branch)}
                     />
                   </Tooltip>
@@ -93,14 +97,31 @@ export function BranchPanel({
         <List
           className="compact-list"
           dataSource={branches.remote}
-          renderItem={(branch) => (
-            <List.Item className="branch-item remote">
-              <Space size={6}>
-                <GitlabOutlined />
-                <Typography.Text ellipsis>{branch}</Typography.Text>
-              </Space>
-            </List.Item>
-          )}
+          renderItem={(branch) => {
+            const active = branch === branches.upstream;
+            return (
+              <List.Item
+                className={active ? "branch-item remote active" : "branch-item remote"}
+                actions={[
+                  <Tooltip title={active ? t("trackingCurrentBranch") : t("switchRemoteBranch")} key="checkout-remote">
+                    <Button
+                      size="small"
+                      type="text"
+                      icon={<SwapOutlined />}
+                      disabled={active || busy}
+                      onClick={() => onCheckoutRemoteBranch(branch)}
+                    />
+                  </Tooltip>
+                ]}
+              >
+                <Space size={6}>
+                  <GitlabOutlined />
+                  <Typography.Text ellipsis>{branch}</Typography.Text>
+                  {active && <Tag color="processing">{t("trackingCurrentBranch")}</Tag>}
+                </Space>
+              </List.Item>
+            );
+          }}
         />
       ) : (
         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("noRemoteBranches")} />

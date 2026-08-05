@@ -8,9 +8,11 @@ type SidebarProps = {
   repoInfo?: RepoInfo;
   recentRepos: RepoInfo[];
   branches: BranchInfo;
+  busy: boolean;
   onOpenRecent(repoPath: string): void;
   onCreateBranch(): void;
   onCheckoutBranch(branchName: string): void;
+  onCheckoutRemoteBranch(branchName: string): void;
   onDeleteBranch(branchName: string): void;
   onMerge(): void;
 };
@@ -19,9 +21,11 @@ export function Sidebar({
   repoInfo,
   recentRepos,
   branches,
+  busy,
   onOpenRecent,
   onCreateBranch,
   onCheckoutBranch,
+  onCheckoutRemoteBranch,
   onDeleteBranch,
   onMerge
 }: SidebarProps) {
@@ -69,8 +73,10 @@ export function Sidebar({
         <BranchPanel
           branches={branches}
           currentBranch={repoInfo.currentBranch}
+          busy={busy}
           onCreateBranch={onCreateBranch}
           onCheckoutBranch={onCheckoutBranch}
+          onCheckoutRemoteBranch={onCheckoutRemoteBranch}
           onDeleteBranch={onDeleteBranch}
           onMerge={onMerge}
         />

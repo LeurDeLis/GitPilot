@@ -17,6 +17,7 @@ const gitClient: GitBridge = {
   getBranches: (repoPath: string) => ipcRenderer.invoke("git:branches", repoPath),
   createBranch: (repoPath: string, branchName: string) => ipcRenderer.invoke("git:branch:create", repoPath, branchName),
   checkoutBranch: (repoPath: string, branchName: string) => ipcRenderer.invoke("git:branch:checkout", repoPath, branchName),
+  checkoutRemoteBranch: (repoPath: string, branchName: string) => ipcRenderer.invoke("git:branch:checkout-remote", repoPath, branchName),
   deleteBranch: (repoPath: string, branchName: string) => ipcRenderer.invoke("git:branch:delete", repoPath, branchName),
   pull: (repoPath: string) => ipcRenderer.invoke("git:pull", repoPath),
   push: (repoPath: string) => ipcRenderer.invoke("git:push", repoPath),

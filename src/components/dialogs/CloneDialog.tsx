@@ -67,15 +67,19 @@ export function CloneDialog({
           <Input placeholder="https://github.com/user/repo.git or git@github.com:user/repo.git" />
         </Form.Item>
         <Form.Item
-          name="targetDir"
           label={t("targetDirectory")}
-          rules={[
-            { required: true, message: t("targetDirectoryRequired") },
-            { whitespace: true, message: t("targetDirectoryEmpty") }
-          ]}
         >
           <Space.Compact className="full-width">
-            <Input placeholder="D:\\Projects\\repo" />
+            <Form.Item
+              name="targetDir"
+              noStyle
+              rules={[
+                { required: true, message: t("targetDirectoryRequired") },
+                { whitespace: true, message: t("targetDirectoryEmpty") }
+              ]}
+            >
+              <Input placeholder="D:\\Projects\\repo" />
+            </Form.Item>
             <Button icon={<FolderOpenOutlined />} onClick={chooseTarget}>
               {t("chooseParentDirectory")}
             </Button>

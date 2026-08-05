@@ -47,6 +47,7 @@ export type BranchInfo = {
   current: string;
   local: string[];
   remote: string[];
+  upstream?: string;
 };
 
 export type CommitItem = {
@@ -96,6 +97,7 @@ export type GitBridge = {
   getBranches(repoPath: string): Promise<BranchInfo>;
   createBranch(repoPath: string, branchName: string): Promise<GitResult>;
   checkoutBranch(repoPath: string, branchName: string): Promise<GitResult>;
+  checkoutRemoteBranch(repoPath: string, branchName: string): Promise<GitResult>;
   deleteBranch(repoPath: string, branchName: string): Promise<GitResult>;
   pull(repoPath: string): Promise<GitResult>;
   push(repoPath: string): Promise<GitResult>;

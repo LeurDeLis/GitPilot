@@ -363,6 +363,29 @@ function App() {
     );
   };
 
+  const handleCheckoutRemoteBranch = async (branchName: string) => {
+    if (!repoInfo) {
+      return;
+    }
+
+    if (status && !status.isClean) {
+      const confirmed = await confirm({
+        title: t("uncommittedChangesTitle"),
+        content: t("uncommittedChangesDescription"),
+        okText: t("continueSwitch")
+      });
+      if (!confirmed) {
+        return;
+      }
+    }
+
+    await runGitAction(
+      t("switchRemoteBranch"),
+      () => gitApi.checkoutRemoteBranch(repoInfo.path, branchName),
+      t("branchSwitched")
+    );
+  };
+
   const handleDeleteBranch = async (branchName: string) => {
     if (!repoInfo) {
       return;
@@ -755,9 +778,11 @@ function App() {
               repoInfo={repoInfo}
               recentRepos={recentRepos}
               branches={branches}
+              busy={busy}
               onOpenRecent={openRepoByPath}
               onCreateBranch={() => setCreateBranchOpen(true)}
               onCheckoutBranch={handleCheckoutBranch}
+              onCheckoutRemoteBranch={handleCheckoutRemoteBranch}
               onDeleteBranch={handleDeleteBranch}
               onMerge={() => setMergeOpen(true)}
             />

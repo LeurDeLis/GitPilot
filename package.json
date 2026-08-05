@@ -14,9 +14,9 @@
     "build": "tsc -p tsconfig.json --noEmit && vite build && tsc -p tsconfig.electron.json",
     "start": "node scripts/startElectron.cjs",
     "dist": "npm run build && electron-builder",
-    "dist:installer": "npm run build && electron-builder --win nsis",
-    "dist:portable": "npm run build && electron-builder --win portable",
-    "dist:win": "npm run build && electron-builder --win nsis && electron-builder --win portable",
+    "dist:installer": "npm run build && node scripts/packageWindows.cjs nsis",
+    "dist:portable": "npm run build && node scripts/packageWindows.cjs portable",
+    "dist:win": "npm run build && node scripts/packageWindows.cjs nsis portable",
     "lint": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.electron.json --noEmit"
   },
   "dependencies": {
@@ -34,6 +34,7 @@
     "concurrently": "^8.2.2",
     "electron": "^29.3.0",
     "electron-builder": "^24.13.3",
+    "resedit": "^3.0.2",
     "typescript": "^5.4.5",
     "vite": "^5.2.8",
     "wait-on": "^7.2.0"
@@ -51,12 +52,23 @@
       "build/icon.ico",
       "package.json"
     ],
+    "afterPack": "scripts/afterPack.cjs",
     "win": {
       "target": "nsis",
       "icon": "build/icon.ico",
       "signAndEditExecutable": false
     },
     "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "GitPilot",
+      "installerLanguages": [
+        "zh_CN",
+        "en_US"
+      ],
+      "include": "build/installer.nsh",
       "artifactName": "GitPilot Setup ${version}.${ext}",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico"

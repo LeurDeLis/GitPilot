@@ -70,7 +70,7 @@ export class GitService {
 
   async getStatus(repoPath: string): Promise<GitStatus> {
     const root = await this.resolveRepoRoot(repoPath);
-    const result = await this.runGit(root, ["status", "--porcelain=v1", "-b"], "status", root);
+    const result = await this.runGit(root, ["-c", "core.quotePath=false", "status", "--porcelain=v1", "-b"], "status", root);
 
     if (!result.success) {
       throw new Error(readableError(result, "获取仓库状态失败"));
@@ -81,10 +81,16 @@ export class GitService {
 
   async getBranches(repoPath: string): Promise<BranchInfo> {
     const root = await this.resolveRepoRoot(repoPath);
-    const [current, localResult, remoteResult] = await Promise.all([
+    const [current, localResult, remoteResult, upstreamResult] = await Promise.all([
       this.getCurrentBranch(root),
       this.runGit(root, ["branch", "--format=%(refname:short)"], "branch:list", root),
-      this.runGit(root, ["branch", "-r", "--format=%(refname:short)"], "branch:list-remote", root)
+      this.runGit(
+        root,
+        ["for-each-ref", "--format=%(refname:short)\t%(symref)", "refs/remotes"],
+        "branch:list-remote",
+        root
+      ),
+      this.runGit(root, ["for-each-ref", "--format=%(refname:short)\t%(upstream:short)", "refs/heads"], "branch:upstream", root)
     ]);
 
     if (!localResult.success) {
@@ -93,10 +99,27 @@ export class GitService {
 
     const local = splitLines(localResult.stdout);
     const remote = remoteResult.success
-      ? splitLines(remoteResult.stdout).filter((item) => !item.includes("HEAD ->"))
+      ? splitLines(remoteResult.stdout)
+        .map((line) => {
+          const [ref, symref] = line.split("\t");
+          return { ref, symref };
+        })
+        .filter(({ ref, symref }) => Boolean(ref) && !symref)
+        .map(({ ref }) => ref)
       : [];
 
-    return { current, local, remote };
+    const upstream = upstreamResult.success
+      ? splitLines(upstreamResult.stdout)
+        .map((line) => line.split("\t"))
+        .find(([branch]) => branch === current)?.[1] || undefined
+      : undefined;
+
+    return {
+      current,
+      local,
+      remote,
+      upstream
+    };
   }
 
   async createBranch(repoPath: string, branchName: string): Promise<GitResult> {
@@ -111,6 +134,66 @@ export class GitService {
     const branch = validateBranchName(branchName, true);
     const result = await this.runGit(root, ["checkout", branch], "branch:checkout", root);
     return toGitResult(result);
+  }
+
+  async checkoutRemoteBranch(repoPath: string, remoteBranchName: string): Promise<GitResult> {
+    const root = await this.resolveRepoRoot(repoPath);
+    const remoteBranch = parseRemoteBranch(remoteBranchName);
+    const remoteRef = `${remoteBranch.remote}/${remoteBranch.branch}`;
+
+    const remoteRefsResult = await this.runGit(
+      root,
+      ["for-each-ref", "--format=%(refname:short)", `refs/remotes/${remoteRef}`],
+      "branch:checkout-remote:check",
+      root
+    );
+    if (!remoteRefsResult.success || !splitLines(remoteRefsResult.stdout).includes(remoteRef)) {
+      return {
+        success: false,
+        command: remoteRefsResult.command,
+        output: remoteRefsResult.stdout.trim(),
+        error: "远程分支不存在或已过期"
+      };
+    }
+
+    const localBranchesResult = await this.runGit(
+      root,
+      ["branch", "--format=%(refname:short)"],
+      "branch:checkout-remote:local",
+      root
+    );
+
+    if (!localBranchesResult.success) {
+      return toGitResult(localBranchesResult);
+    }
+
+    if (!splitLines(localBranchesResult.stdout).includes(remoteBranch.branch)) {
+      const result = await this.runGit(
+        root,
+        ["checkout", "--track", remoteRef],
+        "branch:checkout-remote",
+        root
+      );
+      return toGitResult(result);
+    }
+
+    const checkoutResult = await this.runGit(
+      root,
+      ["checkout", remoteBranch.branch],
+      "branch:checkout-remote",
+      root
+    );
+    if (!checkoutResult.success) {
+      return toGitResult(checkoutResult);
+    }
+
+    const upstreamResult = await this.runGit(
+      root,
+      ["branch", "--set-upstream-to", remoteRef, remoteBranch.branch],
+      "branch:upstream:set",
+      root
+    );
+    return combineGitResults([checkoutResult, upstreamResult]);
   }
 
   async deleteBranch(repoPath: string, branchName: string): Promise<GitResult> {
@@ -148,6 +231,19 @@ export class GitService {
     );
 
     if (!upstream.success) {
+      const current = await this.getCurrentBranch(root);
+      const matchingRemote = await this.findMatchingRemoteBranch(root, current);
+      if (matchingRemote) {
+        const remoteBranch = parseRemoteBranch(matchingRemote);
+        const result = await this.runGit(
+          root,
+          ["push", "-u", remoteBranch.remote, remoteBranch.branch],
+          "push",
+          root
+        );
+        return toGitResult(result);
+      }
+
       return {
         success: false,
         command: "git push",
@@ -399,6 +495,31 @@ export class GitService {
     return detachedResult.success ? `detached@${detachedResult.stdout.trim()}` : "unknown";
   }
 
+  private async findMatchingRemoteBranch(repoPath: string, localBranch: string): Promise<string | undefined> {
+    if (!localBranch || localBranch.startsWith("detached@") || localBranch === "unknown") {
+      return undefined;
+    }
+
+    const result = await this.runGit(
+      repoPath,
+      ["for-each-ref", "--format=%(refname:short)", "refs/remotes"],
+      "push:find-remote",
+      repoPath
+    );
+    if (!result.success) {
+      return undefined;
+    }
+
+    const candidates = splitLines(result.stdout)
+      .filter((ref) => {
+        const separator = ref.indexOf("/");
+        return separator > 0
+          && !ref.endsWith("/HEAD")
+          && ref.slice(separator + 1) === localBranch;
+      });
+    return candidates.find((ref) => ref.startsWith("origin/")) || (candidates.length === 1 ? candidates[0] : undefined);
+  }
+
   private async getOriginUrl(repoPath: string): Promise<string | undefined> {
     const result = await this.runGit(repoPath, ["remote", "get-url", "origin"], "remote:origin", repoPath);
     return result.success ? result.stdout.trim() : undefined;
@@ -419,8 +540,13 @@ export class GitService {
   }
 
   private async getConflictFiles(repoPath: string): Promise<string[]> {
-    const result = await this.runGit(repoPath, ["diff", "--name-only", "--diff-filter=U"], "conflict:list", repoPath);
-    return result.success ? splitLines(result.stdout) : [];
+    const result = await this.runGit(
+      repoPath,
+      ["-c", "core.quotePath=false", "diff", "--name-only", "--diff-filter=U"],
+      "conflict:list",
+      repoPath
+    );
+    return result.success ? splitLines(result.stdout).map(decodeGitPath) : [];
   }
 
   private runGit(cwd: string | undefined, args: string[], operation: string, repoPath?: string): Promise<RawGitResult> {
@@ -515,16 +641,17 @@ function parseStatusLine(line: string): ChangedFile {
 
   if (code === "??") {
     return {
-      path: rawPath,
+      path: decodeGitPath(rawPath),
       status: "untracked",
       staged: false
     };
   }
 
   if (CONFLICT_CODES.has(code)) {
+    const renamed = parseRenamedPath(rawPath);
     return {
-      path: parseRenamedPath(rawPath).path,
-      originalPath: parseRenamedPath(rawPath).originalPath,
+      path: renamed.path,
+      originalPath: renamed.originalPath,
       status: "conflicted",
       staged: false
     };
@@ -544,9 +671,74 @@ function parseRenamedPath(rawPath: string): { path: string; originalPath?: strin
   const separator = " -> ";
   if (rawPath.includes(separator)) {
     const [originalPath, nextPath] = rawPath.split(separator);
-    return { path: nextPath, originalPath };
+    return { path: decodeGitPath(nextPath), originalPath: decodeGitPath(originalPath) };
   }
-  return { path: rawPath };
+  return { path: decodeGitPath(rawPath) };
+}
+
+function decodeGitPath(input: string): string {
+  const value = input.trim();
+  if (value.length < 2 || value[0] !== '"' || value[value.length - 1] !== '"') {
+    return value;
+  }
+
+  const body = value.slice(1, -1);
+  const octalBytes: number[] = [];
+  let decoded = "";
+
+  const flushOctalBytes = () => {
+    if (octalBytes.length > 0) {
+      decoded += Buffer.from(octalBytes).toString("utf8");
+      octalBytes.length = 0;
+    }
+  };
+
+  for (let index = 0; index < body.length;) {
+    if (body[index] !== "\\") {
+      flushOctalBytes();
+      decoded += body[index];
+      index += 1;
+      continue;
+    }
+
+    const next = body[index + 1];
+    if (!next) {
+      flushOctalBytes();
+      decoded += "\\";
+      index += 1;
+      continue;
+    }
+
+    if (/^[0-7]$/.test(next)) {
+      let octal = next;
+      let end = index + 2;
+      while (end < body.length && octal.length < 3 && /^[0-7]$/.test(body[end])) {
+        octal += body[end];
+        end += 1;
+      }
+      octalBytes.push(Number.parseInt(octal, 8));
+      index = end;
+      continue;
+    }
+
+    flushOctalBytes();
+    const escapedCharacters: Record<string, string> = {
+      a: "\u0007",
+      b: "\b",
+      f: "\f",
+      n: "\n",
+      r: "\r",
+      t: "\t",
+      v: "\u000b",
+      "\\": "\\",
+      '"': '"'
+    };
+    decoded += escapedCharacters[next] ?? next;
+    index += 2;
+  }
+
+  flushOctalBytes();
+  return decoded;
 }
 
 function mapStatus(code: string): ChangedFile["status"] {
@@ -591,14 +783,14 @@ function parseCommitFiles(rawFiles: string): CommitFile[] {
     if (statusCode.startsWith("R")) {
       return {
         status: "renamed" as const,
-        path: parts[2] || parts[1] || "",
-        originalPath: parts[1]
+        path: decodeGitPath(parts[2] || parts[1] || ""),
+        originalPath: parts[1] ? decodeGitPath(parts[1]) : undefined
       };
     }
 
     return {
       status: mapStatus(statusCode[0]),
-      path: parts[1] || parts[0] || ""
+      path: decodeGitPath(parts[1] || parts[0] || "")
     };
   }).filter((file) => Boolean(file.path));
 }
@@ -650,6 +842,19 @@ function validateGitUrl(input: string): string {
     throw new Error("Git 仓库地址包含非法控制字符");
   }
   return value;
+}
+
+function parseRemoteBranch(input: string): { remote: string; branch: string } {
+  const value = input.trim();
+  const separator = value.indexOf("/");
+  if (separator <= 0 || separator === value.length - 1) {
+    throw new Error("远程分支名称无效");
+  }
+
+  return {
+    remote: validateRemoteName(value.slice(0, separator)),
+    branch: validateBranchName(value.slice(separator + 1), true)
+  };
 }
 
 function validateBranchName(input: string, allowRemote = false): string {
