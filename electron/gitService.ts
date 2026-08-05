@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { REPO_PATH_MISSING_ERROR } from "../src/constants/gitErrors";
 import type {
   BranchInfo,
   ChangedFile,
@@ -45,6 +46,21 @@ export class GitService {
 
   async openRepo(repoPath: string): Promise<RepoInfo> {
     const resolved = validateExistingPath(repoPath);
+    let stat;
+    try {
+      stat = await fs.stat(resolved);
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === "ENOENT" || code === "ENOTDIR") {
+        throw new Error(`${REPO_PATH_MISSING_ERROR}:${resolved}`);
+      }
+      throw error;
+    }
+
+    if (!stat.isDirectory()) {
+      throw new Error(`${REPO_PATH_MISSING_ERROR}:${resolved}`);
+    }
+
     const rootResult = await this.runGit(resolved, ["rev-parse", "--show-toplevel"], "open", resolved);
 
     if (!rootResult.success) {

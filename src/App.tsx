@@ -36,11 +36,12 @@ import { CloneDialog } from "./components/dialogs/CloneDialog";
 import { CreateBranchDialog } from "./components/dialogs/CreateBranchDialog";
 import { MergeDialog } from "./components/dialogs/MergeDialog";
 import { RemoteDialog } from "./components/dialogs/RemoteDialog";
+import { REPO_PATH_MISSING_ERROR } from "./constants/gitErrors";
 import type { Language } from "./i18n";
 import { useI18n } from "./i18n";
 import { useRepoStore } from "./store/repoStore";
 import { useTheme } from "./theme";
-import type { CommitDetail, CommitFile, CommitItem, GitResult, RemoteInfo } from "./types/git";
+import type { CommitDetail, CommitFile, CommitItem, GitResult, RemoteInfo, RepoInfo } from "./types/git";
 import { formatDate, statusColor, statusText } from "./utils/format";
 
 const { Header, Content, Sider } = Layout;
@@ -59,6 +60,11 @@ function gitResultSummary(result: GitResult, fallback: string) {
   const fatalLine = [...lines].reverse().find((line) => /^fatal(?::|\s)/i.test(line));
   const errorLine = lines.find((line) => /^error(?::|\s)/i.test(line));
   return fatalLine || errorLine || lines[lines.length - 1] || fallback;
+}
+
+function isMissingRepoPathError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes(REPO_PATH_MISSING_ERROR);
 }
 
 function createCommitFileColumns(language: Language, translateText: (key: string, params?: Record<string, string | number>) => string): ColumnsType<CommitFile> {
@@ -117,7 +123,8 @@ function App() {
     setLogs,
     setRecentRepos,
     setSelectedFiles,
-    setBusy
+    setBusy,
+    resetRepoData
   } = useRepoStore();
 
   const mergeBranches = useMemo(() => {
@@ -222,7 +229,7 @@ function App() {
     }
   };
 
-  const openRepoByPath = async (repoPath: string) => {
+  const openRepoByPath = async (repoPath: string, fromRecent = false) => {
     setBusy(true);
     try {
       const repo = await gitApi.openRepo(repoPath);
@@ -231,8 +238,50 @@ function App() {
       notify.success(t("repositoryOpened"));
     } catch (error) {
       showError(error, t("openRepositoryFailed"));
+      if (fromRecent && isMissingRepoPathError(error)) {
+        const shouldRemove = await confirm({
+          title: t("missingRecentRepoTitle"),
+          content: t("missingRecentRepoDescription", { path: repoPath }),
+          okText: t("removeRecentRepo"),
+          danger: true
+        });
+
+        if (shouldRemove) {
+          await removeRecentRepoEntry(repoPath);
+        }
+      }
     } finally {
       setBusy(false);
+    }
+  };
+
+  const removeRecentRepoEntry = async (repoPath: string) => {
+    try {
+      const nextRecentRepos = await gitApi.removeRecentRepo(repoPath);
+      const currentRepoPath = useRepoStore.getState().repoInfo?.path;
+
+      setRecentRepos(nextRecentRepos);
+      if (currentRepoPath === repoPath) {
+        resetRepoData();
+        setCommitDetail(undefined);
+        setCommitDetailOpen(false);
+      }
+      notify.success(t("recentRepoRemoved"));
+    } catch (error) {
+      showError(error, t("removeRecentRepoFailed"));
+    }
+  };
+
+  const handleRemoveRecentRepo = async (repo: RepoInfo) => {
+    const shouldRemove = await confirm({
+      title: t("removeRecentRepoTitle", { name: repo.name }),
+      content: t("removeRecentRepoDescription", { path: repo.path }),
+      okText: t("removeRecentRepo"),
+      danger: true
+    });
+
+    if (shouldRemove) {
+      await removeRecentRepoEntry(repo.path);
     }
   };
 
@@ -562,7 +611,9 @@ function App() {
   };
 
   const showError = (error: unknown, title: string) => {
-    const content = error instanceof Error ? error.message : String(error);
+    const content = isMissingRepoPathError(error)
+      ? t("recentRepositoryMissing")
+      : error instanceof Error ? error.message : String(error);
     notify.error(content, title);
   };
 
@@ -587,6 +638,7 @@ function App() {
     danger?: boolean;
   }) => new Promise<boolean>((resolve) => {
     modal.confirm({
+      centered: true,
       title: options.title,
       content: options.content,
       okText: options.okText,
@@ -766,7 +818,8 @@ function App() {
               recentRepos={recentRepos}
               branches={branches}
               busy={busy}
-              onOpenRecent={openRepoByPath}
+              onOpenRecent={(path) => openRepoByPath(path, true)}
+              onRemoveRecent={handleRemoveRecentRepo}
               onCreateBranch={() => setCreateBranchOpen(true)}
               onCheckoutBranch={handleCheckoutBranch}
               onCheckoutRemoteBranch={handleCheckoutRemoteBranch}

@@ -550,6 +550,13 @@ pre {
   border: 0;
 }
 
+.recent-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 2px;
+}
+
 .recent-name {
   overflow: hidden;
   color: var(--text);

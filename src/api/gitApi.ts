@@ -19,6 +19,7 @@ export const gitApi: GitBridge = {
   openRepo: (repoPath) => getClient().openRepo(repoPath),
   cloneRepo: (repoUrl, targetDir) => getClient().cloneRepo(repoUrl, targetDir),
   getRecentRepos: () => isElectron() ? getClient().getRecentRepos() : Promise.resolve([]),
+  removeRecentRepo: (repoPath) => isElectron() ? getClient().removeRecentRepo(repoPath) : Promise.resolve([]),
   getStatus: (repoPath) => getClient().getStatus(repoPath),
   getBranches: (repoPath) => getClient().getBranches(repoPath),
   createBranch: (repoPath, branchName) => getClient().createBranch(repoPath, branchName),

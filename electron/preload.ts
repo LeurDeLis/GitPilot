@@ -13,6 +13,7 @@ const gitClient: GitBridge = {
   openRepo: (repoPath: string) => ipcRenderer.invoke("repo:open", repoPath),
   cloneRepo: (repoUrl: string, targetDir: string) => ipcRenderer.invoke("repo:clone", repoUrl, targetDir),
   getRecentRepos: () => ipcRenderer.invoke("repo:recent"),
+  removeRecentRepo: (repoPath: string) => ipcRenderer.invoke("repo:recent:remove", repoPath),
   getStatus: (repoPath: string) => ipcRenderer.invoke("git:status", repoPath),
   getBranches: (repoPath: string) => ipcRenderer.invoke("git:branches", repoPath),
   createBranch: (repoPath: string, branchName: string) => ipcRenderer.invoke("git:branch:create", repoPath, branchName),

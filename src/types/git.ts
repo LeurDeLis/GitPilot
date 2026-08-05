@@ -93,6 +93,7 @@ export type GitBridge = {
   openRepo(repoPath: string): Promise<RepoInfo>;
   cloneRepo(repoUrl: string, targetDir: string): Promise<GitResult>;
   getRecentRepos(): Promise<RepoInfo[]>;
+  removeRecentRepo(repoPath: string): Promise<RepoInfo[]>;
   getStatus(repoPath: string): Promise<GitStatus>;
   getBranches(repoPath: string): Promise<BranchInfo>;
   createBranch(repoPath: string, branchName: string): Promise<GitResult>;

@@ -1,4 +1,4 @@
-import { ClockCircleOutlined, FolderOpenOutlined } from "@ant-design/icons";
+import { ClockCircleOutlined, DeleteOutlined, FolderOpenOutlined } from "@ant-design/icons";
 import { Button, Divider, Empty, List, Space, Tooltip, Typography } from "antd";
 import { useI18n } from "../i18n";
 import { BranchPanel } from "./BranchPanel";
@@ -10,6 +10,7 @@ type SidebarProps = {
   branches: BranchInfo;
   busy: boolean;
   onOpenRecent(repoPath: string): void;
+  onRemoveRecent(repo: RepoInfo): void;
   onCreateBranch(): void;
   onCheckoutBranch(branchName: string): void;
   onCheckoutRemoteBranch(branchName: string): void;
@@ -23,6 +24,7 @@ export function Sidebar({
   branches,
   busy,
   onOpenRecent,
+  onRemoveRecent,
   onCreateBranch,
   onCheckoutBranch,
   onCheckoutRemoteBranch,
@@ -51,14 +53,35 @@ export function Sidebar({
                   <span className="recent-name">{repo.name}</span>
                   <span className="recent-path">{repo.path}</span>
                 </button>
-                <Tooltip title={t("open")}>
-                  <Button
-                    size="small"
-                    icon={<FolderOpenOutlined />}
-                    type="text"
-                    onClick={() => onOpenRecent(repo.path)}
-                  />
-                </Tooltip>
+                <div className="recent-actions">
+                  <Tooltip title={t("open")}>
+                    <Button
+                      aria-label={t("open")}
+                      disabled={busy}
+                      size="small"
+                      icon={<FolderOpenOutlined />}
+                      type="text"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onOpenRecent(repo.path);
+                      }}
+                    />
+                  </Tooltip>
+                  <Tooltip title={t("removeRecentRepoTooltip")}>
+                    <Button
+                      aria-label={t("removeRecentRepoTooltip")}
+                      danger
+                      disabled={busy}
+                      size="small"
+                      icon={<DeleteOutlined />}
+                      type="text"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onRemoveRecent(repo);
+                      }}
+                    />
+                  </Tooltip>
+                </div>
               </List.Item>
             );
           }}

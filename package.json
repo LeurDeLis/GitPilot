@@ -1,6 +1,6 @@
 {
   "name": "gitpilot",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A desktop visual Git client built with Electron, React and TypeScript.",
   "main": "dist-electron/electron/main.js",
   "author": "GitPilot",

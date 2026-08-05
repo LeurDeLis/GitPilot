@@ -116,6 +116,13 @@ function registerIpcHandlers(): void {
     return settings.recentRepos;
   }));
 
+  ipcMain.handle("repo:recent:remove", safeHandle(async (_event, repoPath: string) => {
+    const settings = await readSettings();
+    settings.recentRepos = settings.recentRepos.filter((item) => item.path !== repoPath);
+    await writeSettings(settings);
+    return settings.recentRepos;
+  }));
+
   ipcMain.handle("git:status", safeHandle((_event, repoPath: string) => gitService.getStatus(repoPath)));
   ipcMain.handle("git:branches", safeHandle((_event, repoPath: string) => gitService.getBranches(repoPath)));
   ipcMain.handle("git:branch:create", safeHandle((_event, repoPath: string, branchName: string) => gitService.createBranch(repoPath, branchName)));
