@@ -15,6 +15,11 @@ function getClient(): GitBridge {
 }
 
 export const gitApi: GitBridge = {
+  createAndPublishBranch: (repoPath, branchName, remoteName) => getClient().createAndPublishBranch(repoPath, branchName, remoteName),
+  deleteRemoteBranch: (repoPath, branchName) => getClient().deleteRemoteBranch(repoPath, branchName),
+  getMarkdownFiles: (repoPath) => getClient().getMarkdownFiles(repoPath),
+  readMarkdownFile: (repoPath, filePath) => getClient().readMarkdownFile(repoPath, filePath),
+  writeMarkdownFile: (repoPath, filePath, content) => getClient().writeMarkdownFile(repoPath, filePath, content),
   selectDirectory: () => getClient().selectDirectory(),
   openRepo: (repoPath) => getClient().openRepo(repoPath),
   cloneRepo: (repoUrl, targetDir) => getClient().cloneRepo(repoUrl, targetDir),

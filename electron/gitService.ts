@@ -27,6 +27,7 @@ type RawGitResult = {
 
 const GIT_TIMEOUT_MS = 120_000;
 const MAX_BUFFER = 1024 * 1024 * 12;
+const MAX_MARKDOWN_SIZE = 4 * 1024 * 1024;
 
 const CONFLICT_CODES = new Set(["DD", "AU", "UD", "UA", "DU", "AA", "UU"]);
 
@@ -145,6 +146,18 @@ export class GitService {
     return toGitResult(result);
   }
 
+  async createAndPublishBranch(repoPath: string, branchName: string, remoteName: string): Promise<GitResult> {
+    const root = await this.resolveRepoRoot(repoPath);
+    const branch = validateBranchName(branchName);
+    const remote = validateRemoteName(remoteName);
+    const remoteCheck = await this.runGit(root, ['remote', 'get-url', remote], 'branch:create-publish:remote', root);
+    if (!remoteCheck.success) return toGitResult(remoteCheck);
+    const createResult = await this.runGit(root, ['branch', branch], 'branch:create', root);
+    if (!createResult.success) return toGitResult(createResult);
+    const publishResult = await this.runGit(root, ['push', '--set-upstream', remote, branch], 'branch:create-publish', root);
+    return toGitResult(publishResult);
+  }
+
   async checkoutBranch(repoPath: string, branchName: string): Promise<GitResult> {
     const root = await this.resolveRepoRoot(repoPath);
     const branch = validateBranchName(branchName, true);
@@ -230,6 +243,31 @@ export class GitService {
     return toGitResult(result);
   }
 
+  async deleteRemoteBranch(repoPath: string, remoteBranchName: string): Promise<GitResult> {
+    const root = await this.resolveRepoRoot(repoPath);
+    const { remote, branch } = parseRemoteBranch(remoteBranchName);
+    const deleteResult = await this.runGit(root, ['push', remote, '--delete', branch], 'branch:delete-remote', root);
+    if (!deleteResult.success) return toGitResult(deleteResult);
+
+    const remoteRef = `${remote}/${branch}`;
+    const upstreams = await this.runGit(root, ['for-each-ref', '--format=%(refname:short)%09%(upstream:short)', 'refs/heads'], 'branch:upstream', root);
+    if (upstreams.success) {
+      const trackedBranches = splitLines(upstreams.stdout)
+        .map((line) => line.split('\t'))
+        .filter(([, upstream]) => upstream === remoteRef)
+        .map(([localBranch]) => localBranch);
+      for (const localBranch of trackedBranches) {
+        const unsetResult = await this.runGit(root, ['branch', '--unset-upstream', localBranch], 'branch:upstream:unset', root);
+        if (!unsetResult.success) return combineGitResults([deleteResult, unsetResult]);
+      }
+    }
+
+    const refsResult = await this.runGit(root, ['for-each-ref', '--format=%(refname:short)', 'refs/remotes'], 'branch:list-remote', root);
+    if (!refsResult.success || !splitLines(refsResult.stdout).includes(remoteRef)) return toGitResult(deleteResult);
+    const pruneResult = await this.runGit(root, ['branch', '--delete', '--remotes', remoteRef], 'branch:delete-remote-ref', root);
+    return pruneResult.success ? toGitResult(deleteResult) : combineGitResults([deleteResult, pruneResult]);
+  }
+
   async pull(repoPath: string): Promise<GitResult> {
     const root = await this.resolveRepoRoot(repoPath);
     const result = await this.runGit(root, ["pull"], "pull", root);
@@ -308,7 +346,7 @@ export class GitService {
     const root = await this.resolveRepoRoot(repoPath);
     const result = await this.runGit(
       root,
-      ["log", "-n", "50", "--pretty=format:%H%x1f%h%x1f%an%x1f%ad%x1f%s", "--date=iso-strict"],
+      ["log", "-n", "50", "--pretty=format:%H%x1f%h%x1f%an%x1f%ad%x1f%P%x1f%s", "--date=iso-strict"],
       "history",
       root
     );
@@ -318,15 +356,59 @@ export class GitService {
     }
 
     return splitLines(result.stdout).map((line) => {
-      const [hash, shortHash, author, date, ...messageParts] = line.split("\x1f");
+      const [hash, shortHash, author, date, parentHashes, ...messageParts] = line.split("\x1f");
       return {
         hash,
         shortHash,
         author,
         date,
+        parents: parentHashes ? parentHashes.split(/\s+/).filter(Boolean) : [],
         message: messageParts.join("\x1f")
       };
     });
+  }
+
+  async getMarkdownFiles(repoPath: string): Promise<string[]> {
+    const root = await this.resolveRepoRoot(repoPath);
+    const result = await this.runGit(root, ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], 'markdown:list', root);
+    if (!result.success) {
+      throw new Error(readableError(result, '获取 Markdown 文件列表失败'));
+    }
+
+    const candidates = Array.from(new Set(result.stdout.split('\0')))
+      .filter((file) => /\.(md|markdown)$/i.test(file))
+      .slice(0, 2000);
+    const existingFiles = await Promise.all(candidates.map(async (file) => {
+      try {
+        const absolutePath = await resolveMarkdownPath(root, file);
+        const stat = await fs.stat(absolutePath);
+        return stat.isFile() ? file.replace(/\\/g, '/') : undefined;
+      } catch {
+        return undefined;
+      }
+    }));
+
+    return existingFiles.filter((file): file is string => Boolean(file)).sort((left, right) => left.localeCompare(right));
+  }
+
+  async readMarkdownFile(repoPath: string, filePath: string): Promise<string> {
+    const root = await this.resolveRepoRoot(repoPath);
+    const absolutePath = await resolveMarkdownPath(root, filePath);
+    const stat = await fs.stat(absolutePath);
+    if (!stat.isFile() || stat.size > MAX_MARKDOWN_SIZE) {
+      throw new Error('Markdown 文件不存在、不是普通文件或超过 4 MB');
+    }
+    return fs.readFile(absolutePath, 'utf8');
+  }
+
+  async writeMarkdownFile(repoPath: string, filePath: string, content: string): Promise<void> {
+    const root = await this.resolveRepoRoot(repoPath);
+    const absolutePath = await resolveMarkdownPath(root, filePath);
+    const stat = await fs.stat(absolutePath);
+    if (!stat.isFile() || stat.size > MAX_MARKDOWN_SIZE || Buffer.byteLength(content, 'utf8') > MAX_MARKDOWN_SIZE) {
+      throw new Error('Markdown 文件不是普通文件或超过 4 MB');
+    }
+    await fs.writeFile(absolutePath, content, 'utf8');
   }
 
   async getCommitDetail(repoPath: string, hash: string): Promise<CommitDetail> {
@@ -336,7 +418,7 @@ export class GitService {
       root,
       [
         "show",
-        "--format=%H%x1f%h%x1f%an%x1f%ad%x1f%s%x1f%b%x1e",
+        "--format=%H%x1f%h%x1f%an%x1f%ad%x1f%s%x1f%P%x1f%b%x1e",
         "--date=iso-strict",
         "--name-status",
         "--find-renames",
@@ -351,13 +433,14 @@ export class GitService {
     }
 
     const [rawHeader, rawFiles = ""] = result.stdout.split("\x1e");
-    const [fullHash, shortHash, author, date, subject, body = ""] = rawHeader.split("\x1f");
+    const [fullHash, shortHash, author, date, subject, parentHashes, body = ""] = rawHeader.split("\x1f");
 
     return {
       hash: fullHash,
       shortHash,
       author,
       date,
+      parents: parentHashes ? parentHashes.split(/\s+/).filter(Boolean) : [],
       message: subject,
       body: body.trim(),
       files: parseCommitFiles(rawFiles)
@@ -825,6 +908,29 @@ function validateExistingPath(input: string): string {
     throw new Error("路径不能为空");
   }
   return resolved;
+}
+
+async function resolveMarkdownPath(repoRoot: string, relativePath: string): Promise<string> {
+  if (typeof relativePath !== 'string' || !relativePath.trim() || relativePath.includes('\0') || path.isAbsolute(relativePath)) {
+    throw new Error('Markdown 文件路径无效');
+  }
+  if (!/\.(md|markdown)$/i.test(relativePath)) {
+    throw new Error('仅允许访问 Markdown 文件');
+  }
+
+  const segments = relativePath.split(/[\\/]+/);
+  if (segments.some((segment) => !segment || segment === '.' || segment === '..')) {
+    throw new Error('Markdown 文件路径无效');
+  }
+
+  const root = await fs.realpath(repoRoot);
+  const candidate = path.resolve(root, ...segments);
+  const candidatePath = await fs.realpath(candidate);
+  const relative = path.relative(root, candidatePath);
+  if (!relative || relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    throw new Error('Markdown 文件必须位于当前仓库内');
+  }
+  return candidatePath;
 }
 
 function validateTargetDirectory(input: string): string {

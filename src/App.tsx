@@ -28,6 +28,7 @@ import { gitApi } from "./api/gitApi";
 import { ChangedFiles } from "./components/ChangedFiles";
 import { CommitHistory } from "./components/CommitHistory";
 import { CommitPanel } from "./components/CommitPanel";
+import { MarkdownWorkspace } from "./components/MarkdownWorkspace";
 import { OperationLog } from "./components/OperationLog";
 import { useNotification } from "./components/NotificationCenter";
 import { Sidebar } from "./components/Sidebar";
@@ -373,21 +374,23 @@ function App() {
     }
   };
 
-  const handleCreateBranch = async (branchName: string) => {
+  const handleCreateBranch = async (branchName: string, remoteName?: string) => {
     if (!repoInfo) {
       return;
     }
 
     setBusy(true);
     try {
-      const result = await gitApi.createBranch(repoInfo.path, branchName);
+      const result = remoteName
+        ? await gitApi.createAndPublishBranch(repoInfo.path, branchName, remoteName)
+        : await gitApi.createBranch(repoInfo.path, branchName);
       await refreshLogs();
       if (!result.success) {
         showGitResultError(result, t("branchCreateFailed"));
         return;
       }
       setCreateBranchOpen(false);
-      notify.success(t("branchCreated"));
+      notify.success(remoteName ? t("branchPublished") : t("branchCreated"));
       await refreshRepository(repoInfo.path);
     } catch (error) {
       showError(error, t("branchCreateFailed"));
@@ -442,6 +445,18 @@ function App() {
     );
   };
 
+  const handleDeleteRemoteBranch = async (remoteBranchName: string) => {
+    if (!repoInfo) return;
+    const confirmed = await confirm({
+      title: t('deleteRemoteBranchTitle', { branch: remoteBranchName }),
+      content: t('deleteRemoteBranchDescription'),
+      okText: t('delete'),
+      danger: true
+    });
+    if (!confirmed) return;
+    await runGitAction(t('deleteRemoteBranch'), () => gitApi.deleteRemoteBranch(repoInfo.path, remoteBranchName), t('remoteBranchDeleted'));
+  };
+
   const handleDeleteBranch = async (branchName: string) => {
     if (!repoInfo) {
       return;
@@ -489,6 +504,13 @@ function App() {
     } catch (error) {
       showError(error, t("errorLoadCommitDetail"));
     }
+  };
+
+  const handleSaveMarkdown = async (filePath: string, content: string) => {
+    if (!repoInfo) throw new Error(t('noRepository'));
+    await gitApi.writeMarkdownFile(repoInfo.path, filePath, content);
+    notify.success(t('markdownSaved'));
+    await refreshRepository(repoInfo.path);
   };
 
   const handleSaveRemote = async (name: string, url: string) => {
@@ -763,6 +785,11 @@ function App() {
               children: renderRemotePanel()
             },
             {
+              key: "markdown",
+              label: t('markdown'),
+              children: repoInfo ? <MarkdownWorkspace key={repoInfo.path} repoPath={repoInfo.path} busy={busy} onSave={handleSaveMarkdown} /> : null
+            },
+            {
               key: "logs",
               label: t("operationLog"),
               children: <OperationLog logs={logs} onClear={clearLogs} />
@@ -823,6 +850,7 @@ function App() {
               onCreateBranch={() => setCreateBranchOpen(true)}
               onCheckoutBranch={handleCheckoutBranch}
               onCheckoutRemoteBranch={handleCheckoutRemoteBranch}
+              onDeleteRemoteBranch={handleDeleteRemoteBranch}
               onDeleteBranch={handleDeleteBranch}
               onMerge={() => setMergeOpen(true)}
             />
@@ -843,6 +871,7 @@ function App() {
       <CreateBranchDialog
         open={createBranchOpen}
         busy={busy}
+        remotes={remotes}
         onCancel={() => setCreateBranchOpen(false)}
         onSubmit={handleCreateBranch}
       />

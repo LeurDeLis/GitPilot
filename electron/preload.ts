@@ -9,6 +9,11 @@ import type {
 } from "../src/types/git";
 
 const gitClient: GitBridge = {
+  createAndPublishBranch: (repoPath: string, branchName: string, remoteName: string) => ipcRenderer.invoke('git:branch:create-publish', repoPath, branchName, remoteName),
+  deleteRemoteBranch: (repoPath: string, branchName: string) => ipcRenderer.invoke('git:branch:delete-remote', repoPath, branchName),
+  getMarkdownFiles: (repoPath: string) => ipcRenderer.invoke('git:markdown:list', repoPath),
+  readMarkdownFile: (repoPath: string, filePath: string) => ipcRenderer.invoke('git:markdown:read', repoPath, filePath),
+  writeMarkdownFile: (repoPath: string, filePath: string, content: string) => ipcRenderer.invoke('git:markdown:write', repoPath, filePath, content),
   selectDirectory: () => ipcRenderer.invoke("dialog:select-directory"),
   openRepo: (repoPath: string) => ipcRenderer.invoke("repo:open", repoPath),
   cloneRepo: (repoUrl: string, targetDir: string) => ipcRenderer.invoke("repo:clone", repoUrl, targetDir),

@@ -84,6 +84,11 @@ app.on("window-all-closed", () => {
 });
 
 function registerIpcHandlers(): void {
+  ipcMain.handle('git:branch:create-publish', safeHandle((_event, repoPath: string, branchName: string, remoteName: string) => gitService.createAndPublishBranch(repoPath, branchName, remoteName)));
+  ipcMain.handle('git:branch:delete-remote', safeHandle((_event, repoPath: string, branchName: string) => gitService.deleteRemoteBranch(repoPath, branchName)));
+  ipcMain.handle('git:markdown:list', safeHandle((_event, repoPath: string) => gitService.getMarkdownFiles(repoPath)));
+  ipcMain.handle('git:markdown:read', safeHandle((_event, repoPath: string, filePath: string) => gitService.readMarkdownFile(repoPath, filePath)));
+  ipcMain.handle('git:markdown:write', safeHandle((_event, repoPath: string, filePath: string, content: string) => gitService.writeMarkdownFile(repoPath, filePath, content)));
   ipcMain.handle("dialog:select-directory", async () => {
     const options: Electron.OpenDialogOptions = {
       title: "选择目录",

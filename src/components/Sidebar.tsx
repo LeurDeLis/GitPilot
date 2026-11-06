@@ -14,6 +14,7 @@ type SidebarProps = {
   onCreateBranch(): void;
   onCheckoutBranch(branchName: string): void;
   onCheckoutRemoteBranch(branchName: string): void;
+  onDeleteRemoteBranch(branchName: string): void;
   onDeleteBranch(branchName: string): void;
   onMerge(): void;
 };
@@ -28,6 +29,7 @@ export function Sidebar({
   onCreateBranch,
   onCheckoutBranch,
   onCheckoutRemoteBranch,
+  onDeleteRemoteBranch,
   onDeleteBranch,
   onMerge
 }: SidebarProps) {
@@ -100,6 +102,7 @@ export function Sidebar({
           onCreateBranch={onCreateBranch}
           onCheckoutBranch={onCheckoutBranch}
           onCheckoutRemoteBranch={onCheckoutRemoteBranch}
+          onDeleteRemoteBranch={onDeleteRemoteBranch}
           onDeleteBranch={onDeleteBranch}
           onMerge={onMerge}
         />

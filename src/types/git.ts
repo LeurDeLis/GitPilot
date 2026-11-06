@@ -56,6 +56,7 @@ export type CommitItem = {
   message: string;
   author: string;
   date: string;
+  parents: string[];
 };
 
 export type CommitFile = {
@@ -97,6 +98,8 @@ export type GitBridge = {
   getStatus(repoPath: string): Promise<GitStatus>;
   getBranches(repoPath: string): Promise<BranchInfo>;
   createBranch(repoPath: string, branchName: string): Promise<GitResult>;
+  createAndPublishBranch(repoPath: string, branchName: string, remoteName: string): Promise<GitResult>;
+  deleteRemoteBranch(repoPath: string, remoteBranchName: string): Promise<GitResult>;
   checkoutBranch(repoPath: string, branchName: string): Promise<GitResult>;
   checkoutRemoteBranch(repoPath: string, branchName: string): Promise<GitResult>;
   deleteBranch(repoPath: string, branchName: string): Promise<GitResult>;
@@ -113,6 +116,9 @@ export type GitBridge = {
   stageFiles(repoPath: string, files: string[]): Promise<GitResult>;
   unstageFiles(repoPath: string, files: string[]): Promise<GitResult>;
   discardFiles(repoPath: string, files: string[]): Promise<GitResult>;
+  getMarkdownFiles(repoPath: string): Promise<string[]>;
+  readMarkdownFile(repoPath: string, filePath: string): Promise<string>;
+  writeMarkdownFile(repoPath: string, filePath: string, content: string): Promise<void>;
   getLogs(): Promise<OperationLogItem[]>;
   clearLogs(): Promise<OperationLogItem[]>;
 };

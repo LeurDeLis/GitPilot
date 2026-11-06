@@ -16,6 +16,7 @@ type BranchPanelProps = {
   onCreateBranch(): void;
   onCheckoutBranch(branchName: string): void;
   onCheckoutRemoteBranch(branchName: string): void;
+  onDeleteRemoteBranch(branchName: string): void;
   onDeleteBranch(branchName: string): void;
   onMerge(): void;
 };
@@ -27,6 +28,7 @@ export function BranchPanel({
   onCreateBranch,
   onCheckoutBranch,
   onCheckoutRemoteBranch,
+  onDeleteRemoteBranch,
   onDeleteBranch,
   onMerge
 }: BranchPanelProps) {
@@ -110,6 +112,16 @@ export function BranchPanel({
                       icon={<SwapOutlined />}
                       disabled={active || busy}
                       onClick={() => onCheckoutRemoteBranch(branch)}
+                    />
+                  </Tooltip>,
+                  <Tooltip title={t("deleteRemoteBranch")} key="delete-remote">
+                    <Button
+                      size="small"
+                      type="text"
+                      danger
+                      icon={<DeleteOutlined />}
+                      disabled={busy}
+                      onClick={() => onDeleteRemoteBranch(branch)}
                     />
                   </Tooltip>
                 ]}
