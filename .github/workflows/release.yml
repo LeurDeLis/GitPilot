@@ -63,8 +63,12 @@ jobs:
             $release = Invoke-RestMethod -Uri $releaseUri -Headers $headers
           } catch {
             if ($_.Exception.Response.StatusCode.value__ -ne 404) { throw }
-            $body = @{ tag_name = $env:RELEASE_TAG; name = $env:RELEASE_TAG; draft = $true } | ConvertTo-Json
-            $release = Invoke-RestMethod -Method Post -Uri "https://api.github.com/repos/LeurDeLis/GitPilot/releases" -Headers $headers -ContentType "application/json" -Body $body
+            $releases = Invoke-RestMethod -Uri "https://api.github.com/repos/LeurDeLis/GitPilot/releases?per_page=100" -Headers $headers
+            $release = $releases | Where-Object { $_.tag_name -eq $env:RELEASE_TAG } | Select-Object -First 1
+            if ($null -eq $release) {
+              $body = @{ tag_name = $env:RELEASE_TAG; name = $env:RELEASE_TAG; draft = $true } | ConvertTo-Json
+              $release = Invoke-RestMethod -Method Post -Uri "https://api.github.com/repos/LeurDeLis/GitPilot/releases" -Headers $headers -ContentType "application/json" -Body $body
+            }
           }
 
           $assetNames = @($artifacts | ForEach-Object { $_.Name })
@@ -76,7 +80,7 @@ jobs:
           $uploadUri = $release.upload_url -replace '\{\?name,label\}$', ''
           foreach ($artifact in $artifacts) {
             $name = [uri]::EscapeDataString($artifact.Name)
-            Invoke-RestMethod -Method Post -Uri "$uploadUri?name=$name" -Headers $headers -ContentType "application/octet-stream" -InFile $artifact.Path | Out-Null
+            Invoke-RestMethod -Method Post -Uri "${uploadUri}?name=${name}" -Headers $headers -ContentType "application/octet-stream" -InFile $artifact.Path | Out-Null
           }
           if ($release.draft) {
             $body = @{ draft = $false } | ConvertTo-Json
