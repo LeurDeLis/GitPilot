@@ -81,7 +81,7 @@ export function BranchPanel({
               >
                 <Space size={6}>
                   <GitlabOutlined />
-                  <Typography.Text ellipsis>{branch}</Typography.Text>
+                  <span className="branch-name" title={branch}>{branch}</span>
                   {active && <Tag color="processing">{t("current")}</Tag>}
                 </Space>
               </List.Item>
@@ -128,7 +128,7 @@ export function BranchPanel({
               >
                 <Space size={6}>
                   <GitlabOutlined />
-                  <Typography.Text ellipsis>{branch}</Typography.Text>
+                  <span className="branch-name" title={branch}>{branch}</span>
                   {active && <Tag color="processing">{t("trackingCurrentBranch")}</Tag>}
                 </Space>
               </List.Item>

@@ -2,6 +2,7 @@ import {
   CheckSquareOutlined,
   ClearOutlined,
   DownloadOutlined,
+  EditOutlined,
   ReloadOutlined,
   RollbackOutlined,
   UploadOutlined,
@@ -23,6 +24,7 @@ type ChangedFilesProps = {
   onStage(files: string[]): void;
   onUnstage(files: string[]): void;
   onDiscard(files: string[]): void;
+  onEditFile(filePath: string): void;
 };
 
 export function ChangedFiles({
@@ -33,7 +35,8 @@ export function ChangedFiles({
   onRefresh,
   onStage,
   onUnstage,
-  onDiscard
+  onDiscard,
+  onEditFile
 }: ChangedFilesProps) {
   const { language, t } = useI18n();
   const files = status?.files ?? [];
@@ -59,7 +62,7 @@ export function ChangedFiles({
       dataIndex: "path",
       render: (_value, record) => (
         <div className="file-cell">
-          <span className="file-name" title={record.path}>{record.path}</span>
+          <button type="button" className="file-name file-edit-link" title={t("editFile")} disabled={busy || record.status === "deleted"} onClick={() => onEditFile(record.path)}>{record.path}</button>
           {record.originalPath && (
             <span className="file-original" title={record.originalPath}>
               {t("originalPath", { path: record.originalPath })}
@@ -77,10 +80,14 @@ export function ChangedFiles({
     },
     {
       title: t("actions"),
-      width: 104,
+      width: 132,
       align: "center",
       render: (_value, record) => (
         <Space size={2}>
+          <Tooltip title={t("editFile")}>
+            <Button type="text" size="small" icon={<EditOutlined />} aria-label={`${t("editFile")} ${record.path}`} disabled={busy || record.status === "deleted"}
+              onClick={(event) => { event.stopPropagation(); onEditFile(record.path); }} />
+          </Tooltip>
           {record.staged ? (
             <Tooltip title={t("unstageFile")}>
               <Button

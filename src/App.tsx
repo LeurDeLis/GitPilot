@@ -23,7 +23,7 @@ import {
 import enUS from "antd/locale/en_US";
 import zhCN from "antd/locale/zh_CN";
 import type { ColumnsType } from "antd/es/table";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { gitApi } from "./api/gitApi";
 import { ChangedFiles } from "./components/ChangedFiles";
 import { CommitHistory } from "./components/CommitHistory";
@@ -46,6 +46,7 @@ import type { CommitDetail, CommitFile, CommitItem, GitResult, RemoteInfo, RepoI
 import { formatDate, statusColor, statusText } from "./utils/format";
 
 const { Header, Content, Sider } = Layout;
+const CodeWorkspace = lazy(() => import("./components/CodeWorkspace").then((module) => ({ default: module.CodeWorkspace })));
 
 type RemoteDialogState = {
   open: boolean;
@@ -99,6 +100,7 @@ function App() {
   const { language, setLanguage, t } = useI18n();
   const { theme, setTheme } = useTheme();
   const [cloneOpen, setCloneOpen] = useState(false);
+  const [editor, setEditor] = useState<{ initialFile?: string }>();
   const [createBranchOpen, setCreateBranchOpen] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
   const [remoteDialog, setRemoteDialog] = useState<RemoteDialogState>({ open: false, mode: "add" });
@@ -762,6 +764,7 @@ function App() {
           onStage={handleStageFiles}
           onUnstage={handleUnstageFiles}
           onDiscard={handleDiscardFiles}
+          onEditFile={(initialFile) => setEditor({ initialFile })}
         />
         <CommitPanel
           selectedCount={selectedFiles.length}
@@ -832,6 +835,7 @@ function App() {
             onThemeChange={setTheme}
             onOpenRepo={handleOpenDirectory}
             onCloneRepo={() => setCloneOpen(true)}
+            onEditCode={() => setEditor({})}
             onPull={() => runGitAction(t("pull"), () => gitApi.pull(repoInfo!.path), t("actionCompleted", { label: t("pull") }))}
             onPush={() => runGitAction(t("push"), () => gitApi.push(repoInfo!.path), t("actionCompleted", { label: t("push") }))}
             onRefresh={() => refreshRepository()}
@@ -861,6 +865,8 @@ function App() {
         </Layout>
       </Layout>
 
+      {editor && repoInfo && <Suspense fallback={null}><CodeWorkspace key={repoInfo.path} repoPath={repoInfo.path} initialFile={editor.initialFile} busy={busy}
+        onClose={() => setEditor(undefined)} onSaved={() => void refreshRepositoryStatus(repoInfo.path)} /></Suspense>}
       <CloneDialog
         open={cloneOpen}
         busy={busy}

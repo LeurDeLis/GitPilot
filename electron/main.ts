@@ -2,10 +2,13 @@ import { app, BrowserWindow, dialog, ipcMain, Menu } from "electron";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { GitService } from "./gitService";
-import type { OperationLogItem, RepoInfo } from "../src/types/git";
+import { readRepositoryFile, writeRepositoryFile } from "./fileService";
+import { EditorService } from "./editorService";
+import type { ExternalEditor, OperationLogItem, RepoInfo } from "../src/types/git";
 
 type Settings = {
   recentRepos: RepoInfo[];
+  customEditors?: ExternalEditor[];
 };
 
 const MAX_RECENT_REPOS = 12;
@@ -16,6 +19,7 @@ const operationLogs: OperationLogItem[] = [];
 
 let mainWindow: BrowserWindow | null = null;
 let gitService: GitService;
+const editorService = new EditorService();
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -42,6 +46,16 @@ function createWindow(): void {
       mainWindow.webContents.openDevTools({ mode: "detach" });
     }
   }
+
+  mainWindow.webContents.on("will-prevent-unload", (event) => {
+    if (!mainWindow) return;
+    const choice = dialog.showMessageBoxSync(mainWindow, {
+      type: "question", title: "GitPilot", message: "文件有未保存的修改 / Unsaved file changes",
+      detail: "关闭后将放弃修改 / Closing will discard these changes.",
+      buttons: ["继续编辑 / Keep editing", "放弃并关闭 / Discard and close"], defaultId: 0, cancelId: 0
+    });
+    if (choice === 1) event.preventDefault();
+  });
 
   mainWindow.on("closed", () => {
     mainWindow = null;
@@ -84,6 +98,25 @@ app.on("window-all-closed", () => {
 });
 
 function registerIpcHandlers(): void {
+  ipcMain.handle("files:list", safeHandle((_event, repoPath: string) => gitService.getRepositoryFiles(repoPath)));
+  ipcMain.handle("files:read", safeHandle((_event, repoPath: string, filePath: string) => readRepositoryFile(repoPath, filePath)));
+  ipcMain.handle("files:write", safeHandle((_event, repoPath: string, filePath: string, content: string, revision?: string) => writeRepositoryFile(repoPath, filePath, content, revision)));
+  ipcMain.handle("editors:detect", safeHandle(async () => editorService.detect((await readSettings()).customEditors)));
+  ipcMain.handle("editors:open", safeHandle((_event, repoPath: string, editorId: string, filePath?: string) => editorService.open(repoPath, editorId, filePath)));
+  ipcMain.handle("editors:select", safeHandle(async () => {
+    const options: Electron.OpenDialogOptions = {
+      title: "选择编辑器 / Select editor",
+      properties: ["openFile"],
+      ...(process.platform === "win32" ? { filters: [{ name: "Editor executable", extensions: ["exe"] }] } : {})
+    };
+    const selection = mainWindow ? await dialog.showOpenDialog(mainWindow, options) : await dialog.showOpenDialog(options);
+    if (selection.canceled || !selection.filePaths[0]) return undefined;
+    const editor = await editorService.add(selection.filePaths[0]);
+    const settings = await readSettings();
+    settings.customEditors = [...(settings.customEditors || []).filter((item) => item.id !== editor.id), editor];
+    await writeSettings(settings);
+    return editor;
+  }));
   ipcMain.handle('git:branch:create-publish', safeHandle((_event, repoPath: string, branchName: string, remoteName: string) => gitService.createAndPublishBranch(repoPath, branchName, remoteName)));
   ipcMain.handle('git:branch:delete-remote', safeHandle((_event, repoPath: string, branchName: string) => gitService.deleteRemoteBranch(repoPath, branchName)));
   ipcMain.handle('git:markdown:list', safeHandle((_event, repoPath: string) => gitService.getMarkdownFiles(repoPath)));
@@ -185,7 +218,8 @@ async function readSettings(): Promise<Settings> {
   try {
     const parsed = JSON.parse(raw) as Partial<Settings>;
     return {
-      recentRepos: Array.isArray(parsed.recentRepos) ? parsed.recentRepos : []
+      recentRepos: Array.isArray(parsed.recentRepos) ? parsed.recentRepos : [],
+      customEditors: Array.isArray(parsed.customEditors) ? parsed.customEditors : []
     };
   } catch {
     return { recentRepos: [] };

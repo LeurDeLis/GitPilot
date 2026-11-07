@@ -89,7 +89,28 @@ export type OperationLogItem = {
   repoPath?: string;
 };
 
+export type RepositoryFile = {
+  path: string;
+  content: string;
+  revision: string;
+  encoding: "UTF-8" | "UTF-16 LE" | "UTF-16 BE" | "GB18030";
+  lineEnding: "LF" | "CRLF";
+  readOnly: boolean;
+};
+
+export type ExternalEditor = {
+  id: string;
+  name: string;
+  executable: string;
+};
+
 export type GitBridge = {
+  getRepositoryFiles(repoPath: string): Promise<string[]>;
+  readRepositoryFile(repoPath: string, filePath: string): Promise<RepositoryFile>;
+  writeRepositoryFile(repoPath: string, filePath: string, content: string, revision?: string): Promise<RepositoryFile>;
+  detectEditors(): Promise<ExternalEditor[]>;
+  selectEditor(): Promise<ExternalEditor | undefined>;
+  openInEditor(repoPath: string, editorId: string, filePath?: string): Promise<void>;
   selectDirectory(): Promise<string | undefined>;
   openRepo(repoPath: string): Promise<RepoInfo>;
   cloneRepo(repoUrl: string, targetDir: string): Promise<GitResult>;

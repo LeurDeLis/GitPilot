@@ -1,5 +1,6 @@
 import {
   BranchesOutlined,
+  EditOutlined,
   CloudDownloadOutlined,
   CloudUploadOutlined,
   DownOutlined,
@@ -16,6 +17,7 @@ import type { Language } from "../i18n";
 import { useI18n } from "../i18n";
 import type { ThemeMode } from "../theme";
 import type { RepoInfo } from "../types/git";
+import { ExternalEditorButton } from "./ExternalEditorButton";
 import appIcon from "../icon/app_icon.png";
 
 type TopBarProps = {
@@ -27,6 +29,7 @@ type TopBarProps = {
   onThemeChange(theme: ThemeMode): void;
   onOpenRepo(): void;
   onCloneRepo(): void;
+  onEditCode(): void;
   onPull(): void;
   onPush(): void;
   onRefresh(): void;
@@ -41,6 +44,7 @@ export function TopBar({
   onThemeChange,
   onOpenRepo,
   onCloneRepo,
+  onEditCode,
   onPull,
   onPush,
   onRefresh
@@ -172,6 +176,11 @@ export function TopBar({
           <Typography.Text type="secondary">{t("noRepository")}</Typography.Text>
         )}
       </div>
+
+      <Space size={8} className="topbar-editor-actions">
+        <Button icon={<EditOutlined />} aria-label={t("codeEditor")} disabled={!repoInfo || busy} onClick={onEditCode}>{t("codeEditor")}</Button>
+        <ExternalEditorButton repoPath={repoInfo?.path} disabled={busy} />
+      </Space>
 
       <Space size={8} className="topbar-actions">
         <Tooltip title="git pull">

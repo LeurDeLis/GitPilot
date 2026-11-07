@@ -42,6 +42,14 @@
 - **灵活提交** — 自由选择全部或部分文件编写 Commit Message 提交
 - **自动刷新** — 每 1.5 秒自动轮询仓库状态，实时反映工作区变化
 
+### 💻 代码编辑与外部 IDE
+- **顶部入口** — 点击“代码编辑”浏览仓库文件树；点击变更文件名或行内编辑按钮可直接打开文件
+- **多语言编辑** — 支持 Python、C/C++、Shell、PowerShell、JavaScript/TypeScript、Java、Go、Rust、JSON、YAML 等文件的语法高亮、行号、自动缩进和括号匹配；未知类型按纯文本编辑
+- **搜索与保存** — `Ctrl/Cmd+F` 搜索、`Ctrl/Cmd+H` 替换、`Ctrl/Cmd+S` 保存；支持在已有目录中新建文件，保存后自动刷新 Git 状态
+- **外部编辑器** — 自动检测 VS Code、PyCharm、CLion、IntelliJ IDEA、WebStorm、Rider、GoLand、RustRover、Cursor、Windsurf、Visual Studio、Sublime Text、Notepad++，支持重新检测和手动选择可执行文件
+- **打开文件或项目** — 顶部“外部编辑器”打开当前仓库，编辑窗口内“外部打开”可选择打开当前文件或整个项目；记住手动添加的编辑器及上次使用项
+- **保存保护** — 切换文件、关闭窗口或外部打开前提示保存；保留 UTF-8/UTF-16 的 BOM 与 LF/CRLF 换行符，检测磁盘修改冲突；GB18030 文件只读，二进制文件与超过 4 MB 的文件请使用外部编辑器
+
 ### 🔀 分支操作
 - **分支面板** — 分组展示本地分支和远程分支，当前分支高亮标识
 - **创建分支** — 基于当前 HEAD 创建新的本地分支
@@ -176,12 +184,14 @@ npm run dist
 
 ### Release 下载
 
-最新稳定版本：[GitPilot v1.1.0](https://github.com/LeurDeLis/GitPilot/releases/latest)
+最新稳定版本：[GitPilot v2.0.0](https://github.com/LeurDeLis/GitPilot/releases/latest)
+
+**v2.0.0 更新重点：** 新增仓库内代码编辑器、语法高亮、搜索与替换、文件保存保护，以及外部 IDE 检测和打开功能。
 
 | 文件 | 类型 | 说明 |
 | --- | --- | --- |
-| `GitPilot Setup 1.1.0.exe` | Windows 安装版 | 支持自定义安装路径，并可选择是否创建桌面快捷方式 |
-| `GitPilot 1.1.0.exe` | Windows 绿色便携版 | 无需安装，下载后可直接运行 |
+| `GitPilot Setup 2.0.0.exe` | Windows 安装版 | 支持自定义安装路径，并可选择是否创建桌面快捷方式 |
+| `GitPilot 2.0.0.exe` | Windows 绿色便携版 | 无需安装，下载后可直接运行 |
 
 
 ### Windows 安装包与绿色版

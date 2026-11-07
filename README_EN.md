@@ -42,6 +42,14 @@
 - **Flexible Commits** — Freely select all or specific files and write a commit message to commit
 - **Auto Refresh** — Polls repository status every 1.5 seconds to reflect workspace changes in real time
 
+### 💻 Code Editing & External IDEs
+- **Visible entry points** — Use the top-bar Code editor to browse repository files, or click a changed filename or its edit button
+- **Language support** — Syntax highlighting, line numbers, indentation and bracket matching for Python, C/C++, Shell, PowerShell, JavaScript/TypeScript, Java, Go, Rust, JSON, YAML and more; unknown types open as plain text
+- **Find and save** — `Ctrl/Cmd+F` to find, `Ctrl/Cmd+H` to replace, and `Ctrl/Cmd+S` to save; create files in existing folders and refresh Git status after saving
+- **External editors** — Detect VS Code, PyCharm, CLion, IntelliJ IDEA, WebStorm, Rider, GoLand, RustRover, Cursor, Windsurf, Visual Studio, Sublime Text and Notepad++; rescan or choose an executable manually
+- **Open files or projects** — The top-bar External editor menu opens the repository; the editing window offers the current file or entire project. Custom editors and the last-used choice are remembered
+- **Save protection** — Save prompts before switching, closing or opening externally; preserve UTF-8/UTF-16 BOMs and LF/CRLF endings and refuse stale saves after external changes. GB18030 files are read-only; binary files and files over 4 MB require an external editor
+
 ### 🔀 Branch Operations
 - **Branch Panel** — Displays local and remote branches in separate groups, with the current branch highlighted
 - **Create Branch** — Create a new local branch from the current HEAD
@@ -176,12 +184,14 @@ Build artifacts are output to the `release/` directory.
 
 ### Release Downloads
 
-Latest stable release: [GitPilot v1.1.0](https://github.com/LeurDeLis/GitPilot/releases/latest)
+Latest stable release: [GitPilot v2.0.0](https://github.com/LeurDeLis/GitPilot/releases/latest)
+
+**v2.0.0 highlights:** Adds an in-repository code editor with syntax highlighting, find and replace, save safeguards, external IDE detection, and file or project launch support.
 
 | File | Type | Description |
 | --- | --- | --- |
-| `GitPilot Setup 1.1.0.exe` | Windows installer | Supports a custom installation directory and optional desktop shortcut |
-| `GitPilot 1.1.0.exe` | Windows portable build | No installation required; download and run directly |
+| `GitPilot Setup 2.0.0.exe` | Windows installer | Supports a custom installation directory and optional desktop shortcut |
+| `GitPilot 2.0.0.exe` | Windows portable build | No installation required; download and run directly |
 
 
 ### Windows Installer and Portable Build

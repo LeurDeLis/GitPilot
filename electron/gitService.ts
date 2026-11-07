@@ -368,6 +368,24 @@ export class GitService {
     });
   }
 
+  async getRepositoryFiles(repoPath: string): Promise<string[]> {
+    const root = await this.resolveRepoRoot(repoPath);
+    const result = await this.runGit(root, ["ls-files", "-z", "--cached", "--others", "--exclude-standard"], "files:list", root);
+    if (!result.success) throw new Error(readableError(result, "获取仓库文件列表失败"));
+    const candidates = Array.from(new Set(result.stdout.split("\0").filter(Boolean)));
+    const files: string[] = [];
+    // Bound filesystem concurrency for large repositories and omit deleted paths.
+    for (let index = 0; index < candidates.length; index += 100) {
+      const batch = await Promise.all(candidates.slice(index, index + 100).map(async (file) => {
+        try {
+          return (await fs.lstat(path.join(root, file))).isFile() ? file.replace(/\\/g, "/") : undefined;
+        } catch { return undefined; }
+      }));
+      files.push(...batch.filter((file): file is string => file !== undefined));
+    }
+    return files.sort((left, right) => left.localeCompare(right));
+  }
+
   async getMarkdownFiles(repoPath: string): Promise<string[]> {
     const root = await this.resolveRepoRoot(repoPath);
     const result = await this.runGit(root, ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], 'markdown:list', root);

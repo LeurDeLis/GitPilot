@@ -9,6 +9,13 @@ import type {
 } from "../src/types/git";
 
 const gitClient: GitBridge = {
+  getRepositoryFiles: (repoPath) => ipcRenderer.invoke("files:list", repoPath),
+  readRepositoryFile: (repoPath, filePath) => ipcRenderer.invoke("files:read", repoPath, filePath),
+  writeRepositoryFile: (repoPath, filePath, content, revision) => ipcRenderer.invoke("files:write", repoPath, filePath, content, revision),
+  detectEditors: () => ipcRenderer.invoke("editors:detect"),
+  selectEditor: () => ipcRenderer.invoke("editors:select"),
+  openInEditor: (repoPath, editorId, filePath) => ipcRenderer.invoke("editors:open", repoPath, editorId, filePath),
+
   createAndPublishBranch: (repoPath: string, branchName: string, remoteName: string) => ipcRenderer.invoke('git:branch:create-publish', repoPath, branchName, remoteName),
   deleteRemoteBranch: (repoPath: string, branchName: string) => ipcRenderer.invoke('git:branch:delete-remote', repoPath, branchName),
   getMarkdownFiles: (repoPath: string) => ipcRenderer.invoke('git:markdown:list', repoPath),

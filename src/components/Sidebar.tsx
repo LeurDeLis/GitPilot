@@ -52,8 +52,8 @@ export function Sidebar({
             return (
               <List.Item className={active ? "recent-item active" : "recent-item"}>
                 <button className="recent-button" onClick={() => onOpenRecent(repo.path)}>
-                  <span className="recent-name">{repo.name}</span>
-                  <span className="recent-path">{repo.path}</span>
+                  <span className="recent-name" title={repo.name}>{repo.name}</span>
+                  <span className="recent-path" title={repo.path}>{repo.path}</span>
                 </button>
                 <div className="recent-actions">
                   <Tooltip title={t("open")}>
