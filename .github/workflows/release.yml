@@ -32,12 +32,56 @@ jobs:
         run: >-
           node -e 'const version = require("./package.json").version; if (process.env.RELEASE_TAG !== "v" + version) throw new Error(`Tag must match package.json version: v${version}`)'
       - run: npm run build
-      - name: Build and publish installer and portable release
-        run: npx electron-builder --win nsis portable --publish always
+      - name: Build installer and portable release assets
+        run: npx electron-builder --win nsis portable --publish never
+      - name: Upload release assets
+        shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          EP_DRAFT: "false"
-          EP_GH_IGNORE_TIME: "true"
+          RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release_tag || github.ref_name }}
+        run: |
+          $headers = @{
+            Authorization = "Bearer $env:GH_TOKEN"
+            Accept = "application/vnd.github+json"
+            "X-GitHub-Api-Version" = "2022-11-28"
+          }
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $artifacts = @(
+            @{ Path = "release/GitPilot Setup $version.exe"; Name = "GitPilot-Setup-$version.exe" },
+            @{ Path = "release/GitPilot Setup $version.exe.blockmap"; Name = "GitPilot-Setup-$version.exe.blockmap" },
+            @{ Path = "release/GitPilot $version.exe"; Name = "GitPilot-$version.exe" },
+            @{ Path = "release/latest.yml"; Name = "latest.yml" }
+          )
+          foreach ($artifact in $artifacts) {
+            if (-not (Test-Path -LiteralPath $artifact.Path)) {
+              throw "Build output is missing: $($artifact.Path)"
+            }
+          }
+
+          $releaseUri = "https://api.github.com/repos/LeurDeLis/GitPilot/releases/tags/$env:RELEASE_TAG"
+          try {
+            $release = Invoke-RestMethod -Uri $releaseUri -Headers $headers
+          } catch {
+            if ($_.Exception.Response.StatusCode.value__ -ne 404) { throw }
+            $body = @{ tag_name = $env:RELEASE_TAG; name = $env:RELEASE_TAG; draft = $true } | ConvertTo-Json
+            $release = Invoke-RestMethod -Method Post -Uri "https://api.github.com/repos/LeurDeLis/GitPilot/releases" -Headers $headers -ContentType "application/json" -Body $body
+          }
+
+          $assetNames = @($artifacts | ForEach-Object { $_.Name })
+          foreach ($asset in @($release.assets)) {
+            if ($assetNames -contains $asset.name) {
+              Invoke-RestMethod -Method Delete -Uri $asset.url -Headers $headers | Out-Null
+            }
+          }
+          $uploadUri = $release.upload_url -replace '\{\?name,label\}$', ''
+          foreach ($artifact in $artifacts) {
+            $name = [uri]::EscapeDataString($artifact.Name)
+            Invoke-RestMethod -Method Post -Uri "$uploadUri?name=$name" -Headers $headers -ContentType "application/octet-stream" -InFile $artifact.Path | Out-Null
+          }
+          if ($release.draft) {
+            $body = @{ draft = $false } | ConvertTo-Json
+            Invoke-RestMethod -Method Patch -Uri "https://api.github.com/repos/LeurDeLis/GitPilot/releases/$($release.id)" -Headers $headers -ContentType "application/json" -Body $body | Out-Null
+          }
       - name: Verify published update metadata
         shell: pwsh
         env:
@@ -50,6 +94,9 @@ jobs:
             "X-GitHub-Api-Version" = "2022-11-28"
           }
           $release = Invoke-RestMethod -Uri "https://api.github.com/repos/LeurDeLis/GitPilot/releases/tags/$env:RELEASE_TAG" -Headers $headers
-          if ($release.assets.name -notcontains "latest.yml") {
-            throw "Release $env:RELEASE_TAG is missing latest.yml; automatic updates will not work."
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $requiredAssets = @("latest.yml", "GitPilot-Setup-$version.exe")
+          $missingAssets = @($requiredAssets | Where-Object { $release.assets.name -notcontains $_ })
+          if ($missingAssets.Count -gt 0) {
+            throw "Release $env:RELEASE_TAG is missing required update assets: $($missingAssets -join ', ')"
           }
