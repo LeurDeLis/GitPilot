@@ -9,6 +9,17 @@ import type {
 } from "../src/types/git";
 
 const gitClient: GitBridge = {
+  getAppVersion: () => ipcRenderer.invoke("app:version"),
+  getUpdateState: () => ipcRenderer.invoke("app:update:state"),
+  checkForUpdates: () => ipcRenderer.invoke("app:update:check"),
+  installUpdate: () => ipcRenderer.invoke("app:update:install"),
+  openProjectPage: () => ipcRenderer.invoke("app:open-project"),
+  openReleasesPage: () => ipcRenderer.invoke("app:open-releases"),
+  onUpdateState: (listener) => {
+    const handler = (_event: Electron.IpcRendererEvent, state: Parameters<typeof listener>[0]) => listener(state);
+    ipcRenderer.on("app:update:state-changed", handler);
+    return () => ipcRenderer.removeListener("app:update:state-changed", handler);
+  },
   getRepositoryFiles: (repoPath) => ipcRenderer.invoke("files:list", repoPath),
   readRepositoryFile: (repoPath, filePath) => ipcRenderer.invoke("files:read", repoPath, filePath),
   writeRepositoryFile: (repoPath, filePath, content, revision) => ipcRenderer.invoke("files:write", repoPath, filePath, content, revision),

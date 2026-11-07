@@ -32,32 +32,37 @@
 
 :root[data-theme="dark"] {
   color: #e7f0ee;
-  background: #121817;
+  background: #202020;
   color-scheme: dark;
 
-  --canvas: #121817;
-  --surface: #19211f;
-  --surface-subtle: #202b28;
-  --surface-muted: #22302d;
-  --line: #334641;
-  --line-strong: #4a5e59;
+  --canvas: #202020;
+  --surface: #272727;
+  --surface-subtle: #303030;
+  --surface-muted: #383838;
+  --line: #444444;
+  --line-strong: #5a5a5a;
   --text: #e7f0ee;
-  --text-muted: #9eb1ac;
-  --accent: #56c5b5;
-  --accent-strong: #7ad7c9;
-  --accent-soft: #1e3a35;
+  --text-muted: #b2b2b2;
+  --accent: #66c7b8;
+  --accent-strong: #8bdbce;
+  --accent-soft: #343d3b;
   --danger: #f28b82;
   --success: #67ca8f;
-  --success-soft: #1d392b;
+  --success-soft: #293a30;
   --warning: #f0bb62;
-  --warning-soft: #3a3020;
-  --danger-soft: #402625;
+  --warning-soft: #3a3428;
+  --danger-soft: #402b2b;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24), 0 8px 22px rgba(0, 0, 0, 0.16);
   --shadow-lg: 0 18px 42px rgba(0, 0, 0, 0.28);
 }
 
 :root[data-theme="dark"] .app-header {
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 6px 18px rgba(0, 0, 0, 0.22);
+}
+
+:root[data-theme="dark"] .app-shell::before {
+  opacity: 0;
+  background-image: none;
 }
 
 * {
@@ -248,6 +253,55 @@ pre {
   padding: 0 18px;
   border-right: 1px solid var(--line);
   border-left: 1px solid var(--line);
+}
+
+.about-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.about-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.about-heading img {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+  object-fit: contain;
+}
+
+.about-heading .ant-typography {
+  display: block;
+  margin: 0;
+}
+
+.about-project-link.ant-btn {
+  align-self: flex-start;
+  padding-inline: 0;
+}
+
+.about-update-section {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.about-update-section .ant-alert-message {
+  overflow-wrap: anywhere;
+}
+
+.about-update-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .notification-center {
@@ -898,114 +952,6 @@ pre {
   white-space: nowrap;
 }
 
-.markdown-workspace {
-  display: flex;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.markdown-file-pane {
-  display: flex;
-  width: 34%;
-  min-width: 150px;
-  max-width: 250px;
-  flex: 0 0 auto;
-  flex-direction: column;
-  gap: 10px;
-  padding-right: 12px;
-  overflow: hidden;
-  border-right: 1px solid var(--line);
-}
-
-.markdown-file-toolbar,
-.markdown-document-toolbar {
-  display: flex;
-  min-width: 0;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.markdown-file-list {
-  min-height: 0;
-  overflow-y: auto;
-}
-
-.markdown-file {
-  display: flex;
-  min-width: 0;
-  justify-content: flex-start !important;
-  gap: 8px;
-  padding: 8px 7px !important;
-  color: var(--text-muted);
-  border: 0 !important;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.markdown-file .ant-typography {
-  min-width: 0;
-  flex: 1;
-  font-size: 11px;
-}
-
-.markdown-file:hover,
-.markdown-file.active {
-  color: var(--accent);
-  background: var(--accent-soft);
-}
-
-.markdown-dirty-indicator {
-  width: 6px;
-  height: 6px;
-  flex: 0 0 6px;
-  background: var(--warning);
-  border-radius: 50%;
-}
-
-.markdown-document {
-  display: flex;
-  min-width: 0;
-  min-height: 0;
-  flex: 1;
-  flex-direction: column;
-  gap: 10px;
-  padding-left: 12px;
-  overflow: hidden;
-}
-
-.markdown-document-path {
-  min-width: 0;
-  flex: 1;
-  font-size: 12px;
-  font-weight: 650;
-}
-
-.markdown-document > .ant-spin-nested-loading {
-  height: 100%;
-  min-height: 0;
-  flex: 1;
-  overflow: auto;
-}
-
-.markdown-document .ant-spin-container {
-  height: 100%;
-  min-height: 0;
-}
-
-.markdown-editor.ant-input {
-  width: 100%;
-  height: 100%;
-  min-height: 240px;
-  resize: none;
-  color: var(--text);
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  font-size: 12px;
-  line-height: 1.65;
-}
-
 .markdown-preview {
   max-width: 100%;
   padding: 4px 8px 24px;
@@ -1069,6 +1015,13 @@ pre {
 .markdown-preview img {
   max-width: 100%;
   height: auto;
+}
+
+.code-markdown-preview {
+  height: 100%;
+  padding: 16px 24px 32px;
+  overflow: auto;
+  box-sizing: border-box;
 }
 
 .history-list {

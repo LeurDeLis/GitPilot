@@ -1,10 +1,11 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, Menu, Notification, shell } from "electron";
+import { autoUpdater } from "electron-updater";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { GitService } from "./gitService";
 import { readRepositoryFile, writeRepositoryFile } from "./fileService";
 import { EditorService } from "./editorService";
-import type { ExternalEditor, OperationLogItem, RepoInfo } from "../src/types/git";
+import type { AppUpdateState, ExternalEditor, OperationLogItem, RepoInfo } from "../src/types/git";
 
 type Settings = {
   recentRepos: RepoInfo[];
@@ -13,13 +14,18 @@ type Settings = {
 
 const MAX_RECENT_REPOS = 12;
 const APP_NAME = "GitPilot";
+const PROJECT_URL = "https://github.com/LeurDeLis/GitPilot";
+const RELEASES_URL = `${PROJECT_URL}/releases/latest`;
 const APP_ICON = path.join(__dirname, "../../build/icon.ico");
 const DEV_RENDERER_PORT = Number(process.env.GITPILOT_RENDERER_PORT) || 5173;
+const UPDATE_CHECK_INTERVAL = 12 * 60 * 60 * 1000;
 const operationLogs: OperationLogItem[] = [];
 
 let mainWindow: BrowserWindow | null = null;
 let gitService: GitService;
 const editorService = new EditorService();
+let updateState: AppUpdateState = { status: "idle" };
+let updateCheckInFlight = false;
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -68,6 +74,9 @@ app.setAppUserModelId("com.gitpilot.app");
 app.whenReady().then(async () => {
   // The renderer owns the localized, theme-aware application menu.
   Menu.setApplicationMenu(null);
+  if (!supportsAutoUpdate()) {
+    updateState = { status: "unsupported" };
+  }
 
   gitService = new GitService((item) => {
     operationLogs.unshift({
@@ -82,7 +91,13 @@ app.whenReady().then(async () => {
   });
 
   registerIpcHandlers();
+  configureAutoUpdater();
   createWindow();
+  if (supportsAutoUpdate()) {
+    setTimeout(() => void checkForUpdates(), 4000);
+    const interval = setInterval(() => void checkForUpdates(), UPDATE_CHECK_INTERVAL);
+    interval.unref();
+  }
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -98,6 +113,12 @@ app.on("window-all-closed", () => {
 });
 
 function registerIpcHandlers(): void {
+  ipcMain.handle("app:version", () => app.getVersion());
+  ipcMain.handle("app:update:state", () => updateState);
+  ipcMain.handle("app:update:check", safeHandle(() => checkForUpdates()));
+  ipcMain.handle("app:update:install", safeHandle(() => installUpdate()));
+  ipcMain.handle("app:open-project", safeHandle(() => shell.openExternal(PROJECT_URL)));
+  ipcMain.handle("app:open-releases", safeHandle(() => shell.openExternal(RELEASES_URL)));
   ipcMain.handle("files:list", safeHandle((_event, repoPath: string) => gitService.getRepositoryFiles(repoPath)));
   ipcMain.handle("files:read", safeHandle((_event, repoPath: string, filePath: string) => readRepositoryFile(repoPath, filePath)));
   ipcMain.handle("files:write", safeHandle((_event, repoPath: string, filePath: string, content: string, revision?: string) => writeRepositoryFile(repoPath, filePath, content, revision)));
@@ -186,6 +207,75 @@ function registerIpcHandlers(): void {
     operationLogs.length = 0;
     return [];
   });
+}
+
+function supportsAutoUpdate(): boolean {
+  return app.isPackaged && process.platform === "win32" && !process.env.PORTABLE_EXECUTABLE_DIR;
+}
+
+function configureAutoUpdater(): void {
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.on("checking-for-update", () => setUpdateState({ status: "checking" }));
+  autoUpdater.on("update-available", (info) => setUpdateState({ status: "available", version: info.version }));
+  autoUpdater.on("update-not-available", (info) => setUpdateState({ status: "not-available", version: info.version }));
+  autoUpdater.on("download-progress", (progress) => setUpdateState({
+    status: "downloading",
+    version: updateState.version,
+    percent: Math.round(progress.percent)
+  }));
+  autoUpdater.on("update-downloaded", (info) => {
+    setUpdateState({ status: "downloaded", version: info.version, percent: 100 });
+    if (Notification.isSupported()) {
+      const notification = new Notification({
+        title: APP_NAME,
+        body: `Version ${info.version} is ready. Close GitPilot to install it.`
+      });
+      notification.on("click", () => autoUpdater.quitAndInstall(false, true));
+      notification.show();
+    }
+  });
+  autoUpdater.on("error", (error) => setUpdateState({ status: "error", message: getUpdateErrorCode(error) }));
+}
+
+function getUpdateErrorCode(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/Cannot find latest\.yml|latest\.yml.*\b404\b|\b404\b.*latest\.yml/i.test(message)) {
+    return "missing-update-metadata";
+  }
+  return "update-check-failed";
+}
+
+async function checkForUpdates(): Promise<void> {
+  if (!supportsAutoUpdate()) {
+    setUpdateState({ status: "unsupported" });
+    return;
+  }
+  if (updateCheckInFlight || ["available", "downloading", "downloaded"].includes(updateState.status)) return;
+
+  updateCheckInFlight = true;
+  setUpdateState({ status: "checking" });
+  try {
+    await autoUpdater.checkForUpdates();
+  } catch (error) {
+    setUpdateState({ status: "error", message: getUpdateErrorCode(error) });
+  } finally {
+    updateCheckInFlight = false;
+  }
+}
+
+function installUpdate(): void {
+  if (updateState.status !== "downloaded" || !supportsAutoUpdate()) {
+    throw new Error("No downloaded update is ready to install");
+  }
+  autoUpdater.quitAndInstall(false, true);
+}
+
+function setUpdateState(next: AppUpdateState): void {
+  updateState = next;
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("app:update:state-changed", updateState);
+  }
 }
 
 function safeHandle<TArgs extends unknown[], TResult>(

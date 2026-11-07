@@ -209,6 +209,14 @@ npm run dist:win
 
 以上命令都会使用 `src/icon/app_icon.png` 对应的应用图标，安装包和便携版输出到 `release/`。Windows 安装器支持自定义安装目录，并在安装过程中由用户选择是否创建桌面快捷方式；开始菜单快捷方式默认创建。
 
+### 自动更新与发布
+
+Windows 安装版会自动检查 GitHub Releases，并在后台下载更新；下载完成后退出软件时自动安装，也可在“关于”窗口立即重启安装。更新器使用 NSIS 安装包的 blockmap 下载差异内容，不需要先卸载旧版本。绿色便携版和其他平台版本请从“关于”窗口打开发布页手动更新。
+
+发布 Windows 更新时，先将 `package.json` 版本号递增，再推送匹配的 `v<版本号>` 标签（例如 `v2.1.0`）。GitHub Actions 会自动构建并发布安装版、便携版和自动更新清单。第一个包含自动更新支持的版本需要手动安装一次；之后的安装版可自动更新。
+
+如果某个已有 Release 缺少 `latest.yml`，请先将包含 `.github/workflows/release.yml` 的版本推送到默认分支，然后在 GitHub Actions 中手动运行 `Publish Windows release`，输入对应标签（例如 `v2.0.0`）以补发更新资产。工作流会在发布后验证 `latest.yml` 是否存在。
+
 ### 其他命令
 
 | 命令 | 说明 |

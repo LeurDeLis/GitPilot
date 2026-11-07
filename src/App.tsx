@@ -28,7 +28,6 @@ import { gitApi } from "./api/gitApi";
 import { ChangedFiles } from "./components/ChangedFiles";
 import { CommitHistory } from "./components/CommitHistory";
 import { CommitPanel } from "./components/CommitPanel";
-import { MarkdownWorkspace } from "./components/MarkdownWorkspace";
 import { OperationLog } from "./components/OperationLog";
 import { useNotification } from "./components/NotificationCenter";
 import { Sidebar } from "./components/Sidebar";
@@ -508,13 +507,6 @@ function App() {
     }
   };
 
-  const handleSaveMarkdown = async (filePath: string, content: string) => {
-    if (!repoInfo) throw new Error(t('noRepository'));
-    await gitApi.writeMarkdownFile(repoInfo.path, filePath, content);
-    notify.success(t('markdownSaved'));
-    await refreshRepository(repoInfo.path);
-  };
-
   const handleSaveRemote = async (name: string, url: string) => {
     if (!repoInfo) {
       return;
@@ -788,11 +780,6 @@ function App() {
               children: renderRemotePanel()
             },
             {
-              key: "markdown",
-              label: t('markdown'),
-              children: repoInfo ? <MarkdownWorkspace key={repoInfo.path} repoPath={repoInfo.path} busy={busy} onSave={handleSaveMarkdown} /> : null
-            },
-            {
               key: "logs",
               label: t("operationLog"),
               children: <OperationLog logs={logs} onClear={clearLogs} />
@@ -809,15 +796,15 @@ function App() {
       theme={{
         algorithm: theme === "dark" ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
         token: {
-          colorPrimary: theme === "dark" ? "#56c5b5" : "#0f766e",
-          colorInfo: theme === "dark" ? "#56c5b5" : "#0f766e",
-          colorLink: theme === "dark" ? "#7ad7c9" : "#0f766e",
+          colorPrimary: theme === "dark" ? "#66c7b8" : "#0f766e",
+          colorInfo: theme === "dark" ? "#66c7b8" : "#0f766e",
+          colorLink: theme === "dark" ? "#8bdbce" : "#0f766e",
           colorText: theme === "dark" ? "#e7f0ee" : "#1f2b2b",
-          colorTextSecondary: theme === "dark" ? "#9eb1ac" : "#6b7a78",
-          colorBorder: theme === "dark" ? "#334641" : "#d9e4e1",
-          colorBgLayout: theme === "dark" ? "#121817" : "#f2f5f4",
-          colorBgContainer: theme === "dark" ? "#19211f" : "#ffffff",
-          colorBgElevated: theme === "dark" ? "#202b28" : "#ffffff",
+          colorTextSecondary: theme === "dark" ? "#b2b2b2" : "#6b7a78",
+          colorBorder: theme === "dark" ? "#444444" : "#d9e4e1",
+          colorBgLayout: theme === "dark" ? "#202020" : "#f2f5f4",
+          colorBgContainer: theme === "dark" ? "#272727" : "#ffffff",
+          colorBgElevated: theme === "dark" ? "#303030" : "#ffffff",
           borderRadius: 7,
           fontFamily: '"Avenir Next", "Segoe UI Variable", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif'
         }

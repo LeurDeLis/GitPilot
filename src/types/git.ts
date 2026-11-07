@@ -104,7 +104,21 @@ export type ExternalEditor = {
   executable: string;
 };
 
+export type AppUpdateState = {
+  status: "idle" | "checking" | "available" | "not-available" | "downloading" | "downloaded" | "error" | "unsupported";
+  version?: string;
+  percent?: number;
+  message?: string;
+};
+
 export type GitBridge = {
+  getAppVersion(): Promise<string>;
+  getUpdateState(): Promise<AppUpdateState>;
+  checkForUpdates(): Promise<void>;
+  installUpdate(): Promise<void>;
+  openProjectPage(): Promise<void>;
+  openReleasesPage(): Promise<void>;
+  onUpdateState(listener: (state: AppUpdateState) => void): () => void;
   getRepositoryFiles(repoPath: string): Promise<string[]>;
   readRepositoryFile(repoPath: string, filePath: string): Promise<RepositoryFile>;
   writeRepositoryFile(repoPath: string, filePath: string, content: string, revision?: string): Promise<RepositoryFile>;

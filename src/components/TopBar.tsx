@@ -6,19 +6,24 @@ import {
   DownOutlined,
   DownloadOutlined,
   FolderOpenOutlined,
+  GithubOutlined,
   GlobalOutlined,
+  InfoCircleOutlined,
   MoonOutlined,
   ReloadOutlined,
   SunOutlined
 } from "@ant-design/icons";
-import { Button, Dropdown, Space, Tag, Tooltip, Typography } from "antd";
+import { Alert, Button, Dropdown, Modal, Progress, Space, Tag, Tooltip, Typography } from "antd";
+import { useEffect, useState } from "react";
+import { gitApi } from "../api/gitApi";
 import type { MenuProps } from "antd";
 import type { Language } from "../i18n";
 import { useI18n } from "../i18n";
 import type { ThemeMode } from "../theme";
-import type { RepoInfo } from "../types/git";
+import type { AppUpdateState, RepoInfo } from "../types/git";
 import { ExternalEditorButton } from "./ExternalEditorButton";
 import appIcon from "../icon/app_icon.png";
+import { useNotification } from "./NotificationCenter";
 
 type TopBarProps = {
   repoInfo?: RepoInfo;
@@ -50,6 +55,73 @@ export function TopBar({
   onRefresh
 }: TopBarProps) {
   const { t } = useI18n();
+  const notify = useNotification();
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const [appVersion, setAppVersion] = useState("");
+  const [updateState, setUpdateState] = useState<AppUpdateState>({ status: "idle" });
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+
+  useEffect(() => gitApi.onUpdateState((next) => {
+    setUpdateState(next);
+    if (next.status === "downloaded") {
+      notify.success(t("updateReadyNotification", { version: next.version || "" }), t("updateReadyTitle"));
+    }
+  }), [notify, t]);
+
+  useEffect(() => {
+    if (!aboutOpen) return;
+    let active = true;
+    void (async () => {
+      try {
+        const [version, state] = await Promise.all([gitApi.getAppVersion(), gitApi.getUpdateState()]);
+        if (active) { setAppVersion(version); setUpdateState(state); }
+      } catch (error) {
+        if (active) setUpdateState({ status: "error", message: error instanceof Error ? error.message : String(error) });
+      }
+    })();
+    return () => { active = false; };
+  }, [aboutOpen]);
+
+  const checkUpdates = async () => {
+    setCheckingUpdate(true);
+    try { await gitApi.checkForUpdates(); }
+    catch (error) { setUpdateState({ status: "error", message: error instanceof Error ? error.message : String(error) }); }
+    finally { setCheckingUpdate(false); }
+  };
+
+  const openProject = async () => {
+    try { await gitApi.openProjectPage(); }
+    catch (error) { notify.error(error instanceof Error ? error.message : String(error), t("externalLinkFailed")); }
+  };
+
+  const openReleases = async () => {
+    try { await gitApi.openReleasesPage(); }
+    catch (error) { notify.error(error instanceof Error ? error.message : String(error), t("externalLinkFailed")); }
+  };
+
+  const installDownloadedUpdate = async () => {
+    try { await gitApi.installUpdate(); }
+    catch (error) { notify.error(error instanceof Error ? error.message : String(error), t("updateInstallFailed")); }
+  };
+
+  const updateMessage = (() => {
+    switch (updateState.status) {
+      case "checking": return t("updateChecking");
+      case "available": return t("updateAvailable", { version: updateState.version || "" });
+      case "not-available": return t("updateNotAvailable");
+      case "downloading": return t("updateDownloading", { percent: updateState.percent || 0 });
+      case "downloaded": return t("updateDownloaded", { version: updateState.version || "" });
+      case "error": return updateState.message === "missing-update-metadata"
+        ? t("updateMetadataMissing")
+        : t("updateCheckFailed");
+      case "unsupported": return t("updateUnsupported");
+      default: return t("updateIdle");
+    }
+  })();
+  const updateAlertType = updateState.status === "error" ? "error"
+    : updateState.status === "unsupported" ? "warning"
+      : updateState.status === "downloaded" || updateState.status === "not-available" ? "success" : "info";
+  const updateBusy = checkingUpdate || updateState.status === "checking" || updateState.status === "available" || updateState.status === "downloading";
 
   const menuItems: MenuProps["items"] = [
     {
@@ -83,6 +155,12 @@ export function TopBar({
     },
     { type: "divider" },
     {
+      key: "menu-about",
+      icon: <InfoCircleOutlined />,
+      label: t("about")
+    },
+    { type: "divider" },
+    {
       key: "menu-refresh",
       icon: <ReloadOutlined />,
       label: t("refresh"),
@@ -113,12 +191,16 @@ export function TopBar({
       case "menu-refresh":
         onRefresh();
         break;
+      case "menu-about":
+        setAboutOpen(true);
+        break;
       default:
         break;
     }
   };
 
   return (
+    <>
     <div className="topbar">
       <Dropdown
         trigger={["click"]}
@@ -215,5 +297,34 @@ export function TopBar({
         </Tooltip>
       </Space>
     </div>
+    <Modal open={aboutOpen} title={t("about")} footer={null} width={480} onCancel={() => setAboutOpen(false)}>
+      <div className="about-modal-content">
+        <div className="about-heading">
+          <img src={appIcon} alt="" />
+          <div>
+            <Typography.Title level={4}>GitPilot</Typography.Title>
+            <Typography.Text type="secondary">{t("appVersion")}: {appVersion ? `v${appVersion}` : "..."}</Typography.Text>
+          </div>
+        </div>
+        <Button type="link" icon={<GithubOutlined />} className="about-project-link" onClick={() => void openProject()}>
+          {t("projectSource")}
+        </Button>
+        <div className="about-update-section">
+          <Typography.Text strong>{t("updates")}</Typography.Text>
+          <Alert showIcon type={updateAlertType} message={updateMessage} />
+          {updateState.status === "downloading" && <Progress percent={updateState.percent || 0} size="small" status="active" />}
+          <div className="about-update-actions">
+            {updateState.status !== "unsupported" && <Button icon={<ReloadOutlined />} loading={updateBusy} disabled={updateBusy || updateState.status === "downloaded"} onClick={() => void checkUpdates()}>
+              {t("checkForUpdates")}
+            </Button>}
+            <Button icon={<DownloadOutlined />} onClick={() => void openReleases()}>{t("downloadManually")}</Button>
+            {updateState.status === "downloaded" && <Button type="primary" icon={<ReloadOutlined />} onClick={() => void installDownloadedUpdate()}>
+              {t("installUpdateNow")}
+            </Button>}
+          </div>
+        </div>
+      </div>
+    </Modal>
+    </>
   );
 }

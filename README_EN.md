@@ -209,6 +209,14 @@ npm run dist:win
 
 All of these commands use the application icon from `src/icon/app_icon.png`; installer and portable artifacts are written to `release/`. The Windows installer lets users choose a custom installation directory and whether to create a desktop shortcut; the Start Menu shortcut is created by default.
 
+### Automatic Updates and Releases
+
+The Windows installer checks GitHub Releases and downloads updates in the background. A downloaded update installs when GitPilot exits, or you can restart and install immediately from the About dialog. NSIS blockmaps allow differential downloads without uninstalling the previous version. Portable and other platform builds use the manual release-page download in the About dialog.
+
+To publish a Windows update, increment the version in `package.json` and push the matching `v<version>` tag (for example, `v2.1.0`). GitHub Actions builds and publishes the installer, portable build, and update metadata. The first release with updater support must be installed manually; subsequent installer builds can update automatically.
+
+If an existing release is missing `latest.yml`, push the version containing `.github/workflows/release.yml` to the default branch, then manually run `Publish Windows release` in GitHub Actions with the existing tag (for example, `v2.0.0`) to publish the update assets. The workflow verifies that `latest.yml` is present after publishing.
+
 ### Other Commands
 
 | Command | Description |

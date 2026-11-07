@@ -1,7 +1,11 @@
 import { FileAddOutlined, ReloadOutlined, SaveOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Button, Empty, Input, Modal, Space, Spin, Tag, Tree, Typography } from "antd";
+import { Alert, Button, Empty, Input, Modal, Segmented, Space, Spin, Tag, Tree, Typography } from "antd";
 import type { DataNode } from "antd/es/tree";
 import { useEffect, useMemo, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
+import rehypeSanitize from "rehype-sanitize";
+import remarkGfm from "remark-gfm";
 import { gitApi } from "../api/gitApi";
 import { useI18n } from "../i18n";
 import type { RepositoryFile } from "../types/git";
@@ -55,6 +59,7 @@ export function CodeWorkspace({ repoPath, initialFile, busy, onClose, onSaved }:
   const [creating, setCreating] = useState(false);
   const [newPath, setNewPath] = useState("");
   const [newFileOpen, setNewFileOpen] = useState(false);
+  const [markdownMode, setMarkdownMode] = useState<"preview" | "edit">("edit");
   const [expanded, setExpanded] = useState<string[]>([]);
   const [position, setPosition] = useState({ line: 1, column: 1 });
   const mounted = useRef(true);
@@ -66,6 +71,7 @@ export function CodeWorkspace({ repoPath, initialFile, busy, onClose, onSaved }:
   const visibleFiles = useMemo(() => files.filter((file) => file.toLowerCase().includes(search.toLowerCase())), [files, search]);
   const tree = useMemo(() => fileTree(visibleFiles), [visibleFiles]);
   const expandedKeys = search ? Array.from(new Set(visibleFiles.flatMap((file) => file.split("/").slice(0, -1).map((_part, index, parts) => parts.slice(0, index + 1).join("/"))))) : expanded;
+  const isMarkdown = Boolean(document && /\.(?:md|markdown)$/i.test(document.path));
 
   const loadFiles = async () => {
     setLoadingFiles(true);
@@ -81,6 +87,7 @@ export function CodeWorkspace({ repoPath, initialFile, busy, onClose, onSaved }:
       if (!mounted.current || id !== requestId.current) return;
       setDocument(next);
       setContent(next.content);
+      setMarkdownMode(/\.(?:md|markdown)$/i.test(filePath) ? "preview" : "edit");
       const parents = filePath.split("/").slice(0, -1);
       setExpanded((current) => [...new Set([...current, ...parents.map((_part, index) => parents.slice(0, index + 1).join("/"))])]);
     } catch (error) { if (mounted.current && id === requestId.current) notify.error(String(error), t("codeLoadFailed")); }
@@ -171,6 +178,8 @@ export function CodeWorkspace({ repoPath, initialFile, busy, onClose, onSaved }:
             <Typography.Text className="code-document-path" ellipsis title={document?.path || repoPath}>{document?.path || repoPath}</Typography.Text>
             {dirty && <Tag color="gold">{t("unsavedChanges")}</Tag>}
             <Space size={6}>
+              {isMarkdown && <Segmented size="small" value={markdownMode} onChange={(value) => setMarkdownMode(value as "preview" | "edit")}
+                options={[{ label: t("markdownPreview"), value: "preview" }, { label: t("markdownEdit"), value: "edit" }]} />}
               <ExternalEditorButton repoPath={repoPath} filePath={document?.path} compact disabled={disabled} beforeOpen={confirmChanges} />
               <Button size="small" icon={<ReloadOutlined />} aria-label={t("reloadCodeFile")} title={t("reloadCodeFile")} disabled={!document || disabled}
                 onClick={() => document && void afterConfirmation(() => loadFile(document.path))} />
@@ -179,7 +188,8 @@ export function CodeWorkspace({ repoPath, initialFile, busy, onClose, onSaved }:
           </div>
           {document?.readOnly && <Alert showIcon type="info" message={t("readOnlyEncoding")} />}
           <div className="code-document-body"><Spin spinning={loading}>
-            {document ? <CodeEditor filePath={document.path} content={content} readOnly={document.readOnly || loading || busy} onChange={setContent} onSave={() => void save()}
+            {document && isMarkdown && markdownMode === "preview" ? <div className="markdown-preview code-markdown-preview"><ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, rehypeSanitize]}>{content}</ReactMarkdown></div>
+              : document ? <CodeEditor filePath={document.path} content={content} readOnly={document.readOnly || loading || busy} onChange={setContent} onSave={() => void save()}
               onPositionChange={(line, column) => setPosition({ line, column })} />
               : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t("selectCodeFile")} />}
           </Spin></div>

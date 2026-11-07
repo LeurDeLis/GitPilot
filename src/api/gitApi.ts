@@ -15,6 +15,13 @@ function getClient(): GitBridge {
 }
 
 export const gitApi: GitBridge = {
+  getAppVersion: () => getClient().getAppVersion(),
+  getUpdateState: () => getClient().getUpdateState(),
+  checkForUpdates: () => getClient().checkForUpdates(),
+  installUpdate: () => getClient().installUpdate(),
+  openProjectPage: () => getClient().openProjectPage(),
+  openReleasesPage: () => getClient().openReleasesPage(),
+  onUpdateState: (listener) => getClient().onUpdateState(listener),
   getRepositoryFiles: (repoPath) => getClient().getRepositoryFiles(repoPath),
   readRepositoryFile: (repoPath, filePath) => getClient().readRepositoryFile(repoPath, filePath),
   writeRepositoryFile: (repoPath, filePath, content, revision) => getClient().writeRepositoryFile(repoPath, filePath, content, revision),
