@@ -190,8 +190,8 @@ npm run dist
 
 | 文件 | 类型 | 说明 |
 | --- | --- | --- |
-| `GitPilot Setup 2.0.0.exe` | Windows 安装版 | 支持自定义安装路径，并可选择是否创建桌面快捷方式 |
-| `GitPilot 2.0.0.exe` | Windows 绿色便携版 | 无需安装，下载后可直接运行 |
+| `GitPilot.Setup.2.0.0.exe` | Windows 安装版 | 支持自定义安装路径，并可选择是否创建桌面快捷方式 |
+| `GitPilot.2.0.0.exe` | Windows 绿色便携版 | 无需安装，下载后可直接运行 |
 
 
 ### Windows 安装包与绿色版

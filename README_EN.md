@@ -190,8 +190,8 @@ Latest stable release: [GitPilot v2.0.0](https://github.com/LeurDeLis/GitPilot/r
 
 | File | Type | Description |
 | --- | --- | --- |
-| `GitPilot Setup 2.0.0.exe` | Windows installer | Supports a custom installation directory and optional desktop shortcut |
-| `GitPilot 2.0.0.exe` | Windows portable build | No installation required; download and run directly |
+| `GitPilot.Setup.2.0.0.exe` | Windows installer | Supports a custom installation directory and optional desktop shortcut |
+| `GitPilot.2.0.0.exe` | Windows portable build | No installation required; download and run directly |
 
 
 ### Windows Installer and Portable Build
